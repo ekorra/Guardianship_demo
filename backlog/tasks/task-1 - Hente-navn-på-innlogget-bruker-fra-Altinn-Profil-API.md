@@ -1,10 +1,10 @@
 ---
 id: TASK-1
 title: Hente navn på innlogget bruker fra Altinn Profil-API
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-03-04 10:06'
-updated_date: '2026-03-04 19:01'
+updated_date: '2026-03-04 19:05'
 labels: []
 dependencies: []
 ---
