@@ -1,4 +1,51 @@
 
+# Vergeportalen — Prosjektinstruksjoner
+
+## Hva er dette?
+Next.js 16 demo-app (App Router) som viser vergemålsinformasjon for innlogget bruker via ID-porten og Altinn.
+
+## Viktige filer
+- `src/lib/auth.ts` — Auth.js v5-konfigurasjon med ID-porten OIDC
+- `src/lib/maskinporten.ts` — Maskinporten-token (henter og cacher)
+- `src/app/dashboard/page.tsx` — Dashboard (Server Component)
+- `src/app/api/logout/route.ts` — RP-initiated logout
+- `src/middleware.ts` — Rutebeskyttelse
+- `src/types/next-auth.d.ts` — Session-typeuttvidelse (pid, given_name, family_name, idToken)
+
+## Kjente tekniske fallgruver
+
+### ID-porten
+- **Påkrevd**: `client: { token_endpoint_auth_method: "client_secret_post" }` i provider-config — standard `basic` avvises av ID-porten
+- **Scopes**: `openid profile` (gir tilgang til `given_name` og `family_name`)
+- **acr**: `idporten-loa-substantial`
+- **End session endpoint**: `https://login.test.idporten.no/logout` (IKKE `/connect/endsession`)
+- `post_logout_redirect_uri` MÅ registreres i Digdir selvbetjening for klienten
+
+### Auth.js v5 logout
+- `signOut({ redirectTo: externalUrl })` støtter IKKE eksterne URLer
+- Løsning: Dedikert `/api/logout` GET-rute som manuelt sletter `authjs.session-token`-cookie og kaller `redirect()` fra `next/navigation`
+
+### Maskinporten
+- JWT assertion må inkludere `kid` i protected header — hentes fra JWK-objektet (`jwkObject.kid`)
+- Assertion er RS256-signert med privatnøkkel fra `MASKINPORTEN_PRIVATE_KEY_JWK` (JWK-format)
+- Token caches in-memory med margin på 10 sekunder før utløp
+- Test-endepunkt: `https://test.maskinporten.no/token`
+- Audience: `https://test.maskinporten.no/`
+
+### Testing
+- Enhetstester (`npm test`): mocker `fetch` globalt med `vi.stubGlobal`
+- Integrasjonstester (`npm run test:integration`): hopper over automatisk hvis env-variabler mangler
+- `generateKeyPair` i tester krever `{ extractable: true }` for å eksportere JWK
+
+## Miljøvariabler (.env.local)
+- `AUTH_SECRET` — tilfeldig streng
+- `IDPORTEN_CLIENT_ID` / `IDPORTEN_CLIENT_SECRET` — fra selvbetjening.test.digdir.no
+- `AUTH_URL` — app-URL (lokalt: `http://localhost:3000`)
+- `MASKINPORTEN_CLIENT_ID` — fra selvbetjening.test.digdir.no
+- `MASKINPORTEN_PRIVATE_KEY_JWK` — RSA privatnøkkel som JWK-JSON (inkluderer `kid`)
+
+---
+
 <!-- BACKLOG.MD GUIDELINES START -->
 # Instructions for the usage of Backlog.md CLI Tool
 
