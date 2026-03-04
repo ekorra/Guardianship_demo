@@ -1,10 +1,10 @@
 ---
 id: TASK-2
 title: Maskinporten-integrasjon (client credentials med privat nøkkel / JWK)
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-03-04 10:06'
-updated_date: '2026-03-04 19:09'
+updated_date: '2026-03-04 19:45'
 labels: []
 dependencies: []
 ordinal: 1000
