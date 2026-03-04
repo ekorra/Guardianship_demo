@@ -24,13 +24,31 @@ export default async function DashboardPage() {
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <p className="text-sm text-gray-500 mb-1">Innlogget som</p>
-          <p className="font-medium text-gray-800">
-            Navn hentes fra Altinn (steg 3)
-          </p>
-          {session.user?.pid && (
-            <p className="text-sm text-gray-400 font-mono mt-0.5">{session.user.pid}</p>
-          )}
+          <p className="text-sm text-gray-500 mb-3">Innlogget som</p>
+          <dl className="space-y-1 text-sm">
+            <div className="flex gap-4">
+              <dt className="w-28 text-gray-400 shrink-0">Fullt navn</dt>
+              <dd className="font-medium text-gray-800">
+                {session.user?.name ?? <span className="italic text-gray-400">ikke tilgjengelig</span>}
+              </dd>
+            </div>
+            <div className="flex gap-4">
+              <dt className="w-28 text-gray-400 shrink-0">Fornavn</dt>
+              <dd className="text-gray-700">
+                {session.user?.given_name ?? <span className="italic text-gray-400">ikke tilgjengelig</span>}
+              </dd>
+            </div>
+            <div className="flex gap-4">
+              <dt className="w-28 text-gray-400 shrink-0">Etternavn</dt>
+              <dd className="text-gray-700">
+                {session.user?.family_name ?? <span className="italic text-gray-400">ikke tilgjengelig</span>}
+              </dd>
+            </div>
+            <div className="flex gap-4">
+              <dt className="w-28 text-gray-400 shrink-0">Fødselsnummer</dt>
+              <dd className="font-mono text-gray-700">{session.user?.pid ?? "—"}</dd>
+            </div>
+          </dl>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm p-6">
