@@ -41,6 +41,8 @@ jobs:
           printf 'STANDARD_BRUKER=%s\n'            "$STANDARD_BRUKER"            >> .env.local
 
       - name: Kjør e2e-tester
+        env:
+          STANDARD_BRUKER: ${{ secrets.STANDARD_BRUKER }}
         run: npm run test:e2e
 
       - name: Last opp Playwright-rapport ved feil
