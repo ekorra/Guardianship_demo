@@ -1,9 +1,11 @@
 ---
 id: TASK-10
 title: Migrate middleware.ts to proxy.ts (Next.js 16)
-status: To Do
-assignee: []
+status: Done
+assignee:
+  - '@claude'
 created_date: '2026-03-06 10:09'
+updated_date: '2026-03-09 12:55'
 labels:
   - nextjs
   - refactor
@@ -18,7 +20,13 @@ Next.js 16 deprecated the 'middleware' file convention in favour of 'proxy'. Ren
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 src/middleware.ts er omdøpt til src/proxy.ts
-- [ ] #2 Advarsel om deprecated middleware forsvinner ved oppstart
-- [ ] #3 Rutebeskyttelse fungerer som før
+- [x] #1 src/middleware.ts er omdøpt til src/proxy.ts
+- [x] #2 Advarsel om deprecated middleware forsvinner ved oppstart
+- [x] #3 Rutebeskyttelse fungerer som før
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Omdøpt src/middleware.ts til src/proxy.ts. Deprecation-advarselen ved oppstart er borte, og rutebeskyttelsen fungerer som før.
+<!-- SECTION:FINAL_SUMMARY:END -->
