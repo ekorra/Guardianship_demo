@@ -1,7 +1,11 @@
 import { auth } from "@/lib/auth"
 import { getAuthorizedParties } from "@/lib/altinn"
 import type { AuthorizedParty } from "@/lib/altinn"
+import type { TraceEntry } from "@/lib/trace"
+import { DevPanel } from "@/components/DevPanel"
 import { redirect } from "next/navigation"
+
+const isDev = process.env.NODE_ENV === "development"
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -13,10 +17,11 @@ export default async function DashboardPage() {
   const pid = session.user?.pid
   let parties: AuthorizedParty[] = []
   let altinnError: string | null = null
+  const traces: TraceEntry[] = []
 
   if (pid) {
     try {
-      parties = await getAuthorizedParties(pid)
+      parties = await getAuthorizedParties(pid, isDev ? traces : undefined)
     } catch (e) {
       altinnError =
         e instanceof Error ? e.message : "Ukjent feil ved henting fra Altinn"
@@ -24,6 +29,7 @@ export default async function DashboardPage() {
   }
 
   return (
+    <>
     <main className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
@@ -109,5 +115,8 @@ export default async function DashboardPage() {
         </div>
       </div>
     </main>
+
+    {isDev && <DevPanel traces={traces} />}
+  </>
   )
 }

@@ -1,4 +1,5 @@
 import { SignJWT, importJWK } from "jose"
+import type { TraceEntry } from "./trace"
 
 interface TokenCache {
   token: string
@@ -7,7 +8,10 @@ interface TokenCache {
 
 let cache: TokenCache | null = null
 
-export async function getMaskinportenToken(scope: string): Promise<string> {
+export async function getMaskinportenToken(
+  scope: string,
+  traces?: TraceEntry[],
+): Promise<string> {
   if (cache && Date.now() < cache.expiresAt) {
     return cache.token
   }
@@ -34,7 +38,9 @@ export async function getMaskinportenToken(scope: string): Promise<string> {
     .setJti(crypto.randomUUID())
     .sign(privateKey)
 
-  const response = await fetch("https://test.maskinporten.no/token", {
+  const tokenUrl = "https://test.maskinporten.no/token"
+  const t0 = Date.now()
+  const response = await fetch(tokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -54,6 +60,20 @@ export async function getMaskinportenToken(scope: string): Promise<string> {
     access_token: string
     expires_in: number
   }
+
+  traces?.push({
+    name: "Maskinporten token",
+    request: {
+      method: "POST",
+      url: tokenUrl,
+      body: { grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", scope },
+    },
+    response: {
+      status: response.status,
+      body: { access_token: "[REDACTED]", expires_in: data.expires_in },
+    },
+    durationMs: Date.now() - t0,
+  })
 
   cache = {
     token: data.access_token,

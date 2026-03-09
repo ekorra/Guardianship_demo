@@ -1,4 +1,5 @@
 import { getMaskinportenToken } from "./maskinporten"
+import type { TraceEntry } from "./trace"
 
 const SCOPE = "altinn:accessmanagement/authorizedparties.resourceowner"
 const BASE_URL = "https://platform.tt02.altinn.no/accessmanagement/api/v1"
@@ -15,9 +16,10 @@ export interface AuthorizedParty {
 }
 
 export async function getAuthorizedParties(
-  pid: string
+  pid: string,
+  traces?: TraceEntry[],
 ): Promise<AuthorizedParty[]> {
-  const token = await getMaskinportenToken(SCOPE)
+  const token = await getMaskinportenToken(SCOPE, traces)
 
   const params = new URLSearchParams({
     includeAltinn2: "false",
@@ -31,20 +33,18 @@ export async function getAuthorizedParties(
     includeInactiveParties: "false",
   })
 
-  const response = await fetch(
-    `${BASE_URL}/resourceowner/authorizedparties?${params}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type: "urn:altinn:person:identifier-no",
-        value: pid,
-      }),
-    }
-  )
+  const altinnUrl = `${BASE_URL}/resourceowner/authorizedparties?${params}`
+  const requestBody = { type: "urn:altinn:person:identifier-no", value: pid }
+  const t0 = Date.now()
+
+  const response = await fetch(altinnUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  })
 
   if (!response.ok) {
     const error = await response.text()
@@ -53,5 +53,14 @@ export async function getAuthorizedParties(
     )
   }
 
-  return (await response.json()) as AuthorizedParty[]
+  const data = (await response.json()) as AuthorizedParty[]
+
+  traces?.push({
+    name: "Altinn vergemål",
+    request: { method: "POST", url: altinnUrl, body: requestBody },
+    response: { status: response.status, body: data },
+    durationMs: Date.now() - t0,
+  })
+
+  return data
 }

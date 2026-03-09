@@ -98,23 +98,55 @@ npm run test:integration
 npm run test:watch
 ```
 
+### Ende til ende-tester (Playwright)
+
+E2E-testene simulerer en ekte innlogging via ID-porten TestID og verifiserer hele flyten gjennom appen.
+
+```bash
+# Kjør e2e-tester (starter dev-server automatisk hvis den ikke kjører)
+npm run test:e2e
+
+# Med synlig nettleser (nyttig under utvikling)
+npx playwright test --headed
+
+# Vis HTML-rapport etter kjøring
+npx playwright show-report
+```
+
+**Nødvendige miljøvariabler for e2e:**
+
+| Variabel | Beskrivelse |
+|----------|-------------|
+| `TEST_PID` | Fødselsnummer for TestID-bruker (11 siffer) |
+| `STANDARD_BRUKER` | Valgfritt — overstyrer `TEST_PID` som standardbruker i tester |
+
+Testene bruker `STANDARD_BRUKER ?? TEST_PID` som personidentifikator i ID-porten TestID-innlogging. I GitHub Actions settes disse via repository secrets (se `.github/workflows/e2e.yml`).
+
 ## Prosjektstruktur
 
 ```
 src/
 ├── app/
-│   ├── api/logout/route.ts     # RP-initiated logout mot ID-porten
-│   ├── dashboard/page.tsx      # Hovedside etter innlogging
-│   ├── login/page.tsx          # Innloggingsside
-│   └── page.tsx                # Rot — redirect til /dashboard
+│   ├── api/
+│   │   ├── auth/[...nextauth]/route.ts  # Auth.js handler (callback, session)
+│   │   └── logout/route.ts             # RP-initiated logout mot ID-porten
+│   ├── dashboard/page.tsx              # Hovedside etter innlogging
+│   ├── login/page.tsx                  # Innloggingsside
+│   └── page.tsx                        # Rot — redirect til /dashboard
+├── components/
+│   └── DevPanel.tsx                    # Debug-panel for API-kall (kun dev-modus)
 ├── lib/
-│   ├── auth.ts                 # Auth.js v5-konfigurasjon (ID-porten OIDC)
-│   ├── maskinporten.ts         # Henter og cacher Maskinporten-token
-│   ├── maskinporten.test.ts    # Enhetstester
-│   └── maskinporten.integration.test.ts  # Integrasjonstester
-├── middleware.ts                # Rutebeskyttelse (krever innlogging)
+│   ├── auth.ts                         # Auth.js v5-konfigurasjon (ID-porten OIDC)
+│   ├── altinn.ts                       # Henter vergerolle fra Altinn API
+│   ├── maskinporten.ts                 # Henter og cacher Maskinporten-token
+│   ├── trace.ts                        # TraceEntry-type for API-sporing i dev-modus
+│   ├── *.test.ts                       # Enhetstester (Vitest, mocker fetch)
+│   └── *.integration.test.ts          # Integrasjonstester mot eksterne API-er
+├── proxy.ts                            # Rutebeskyttelse (Next.js 16 middleware)
 └── types/
-    └── next-auth.d.ts          # Typeuttvidelse for sesjon (pid, navn, idToken)
+    └── next-auth.d.ts                  # Typeuttvidelse for sesjon (pid, navn, idToken)
+e2e/
+└── login.spec.ts                       # Playwright e2e-test — innlogging og utlogging
 ```
 
 ## Viktige konfigurasjonsdetaljer
@@ -123,6 +155,22 @@ src/
 - **Logout** håndteres via dedikert `/api/logout`-rute som sletter `authjs.session-token`-cookie og redirecter til ID-portens `end_session`-endepunkt (`https://login.test.idporten.no/logout`)
 - **Maskinporten**-assertion er en RS256-signert JWT med `kid` i headeren — `kid` hentes fra JWK-objektet
 - `post_logout_redirect_uri` må registreres i selvbetjening for ID-porten-klienten
+
+### Dev-panel og API-sporing
+
+I utviklingsmodus (`NODE_ENV=development`) vises en **"Dev"-knapp** nederst til høyre på dashboard-siden. Klikk på den for å åpne et debug-panel som lister alle HTTP-kall som ble gjort for å bygge siden (Maskinporten-token og Altinn-oppslag). Hvert kall kan ekspanderes for å se request og response.
+
+Sporingslogikken er implementert via et valgfritt `traces`-parameter i bibliotekfunksjonene:
+
+```ts
+// Samle traces manuelt (gjøres automatisk av dashboard i dev-modus):
+const traces: TraceEntry[] = []
+const token = await getMaskinportenToken(scope, traces)
+const parties = await getAuthorizedParties(pid, traces)
+// traces inneholder nå to entries: "Maskinporten token" og "Altinn vergemål"
+```
+
+`access_token` fra Maskinporten er alltid redaktet (`[REDACTED]`) i trace-loggen. Panelet rendres ikke i produksjon.
 
 ## Oppgaveoversikt
 
