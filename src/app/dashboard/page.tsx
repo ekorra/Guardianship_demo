@@ -1,8 +1,9 @@
 import { auth } from "@/lib/auth"
-import { getAuthorizedParties } from "@/lib/altinn"
+import { getAuthorizedParties, isVergePart, getVergemålGruppert } from "@/lib/altinn"
 import type { AuthorizedParty } from "@/lib/altinn"
 import type { TraceEntry } from "@/lib/trace"
 import { DevPanel } from "@/components/DevPanel"
+import { VergemålDetaljer } from "@/components/VergemålDetaljer"
 import { redirect } from "next/navigation"
 
 const isDev = process.env.NODE_ENV === "development"
@@ -94,20 +95,32 @@ export default async function DashboardPage() {
           ) : (
             <ul className="divide-y divide-gray-100">
               {parties.map((party) => (
-                <li key={party.partyUuid} className="py-3 flex items-start gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800">
-                      {party.name}
-                    </p>
-                    <p className="text-xs text-gray-400 font-mono mt-0.5">
-                      {party.type === "Person"
-                        ? party.personId ?? "—"
-                        : party.organizationNumber ?? "—"}
-                    </p>
+                <li key={party.partyUuid} className="py-3">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800">
+                        {party.name}
+                      </p>
+                      <p className="text-xs text-gray-400 font-mono mt-0.5">
+                        {party.type === "Person"
+                          ? party.personId ?? "—"
+                          : party.organizationNumber ?? "—"}
+                      </p>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <span className="text-xs text-gray-400 bg-gray-100 rounded px-2 py-0.5">
+                        {party.type === "Person" ? "Person" : "Organisasjon"}
+                      </span>
+                      {isVergePart(party) && (
+                        <span className="text-xs text-blue-700 bg-blue-100 rounded px-2 py-0.5">
+                          Verge
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-xs text-gray-400 bg-gray-100 rounded px-2 py-0.5 shrink-0">
-                    {party.type === "Person" ? "Person" : "Organisasjon"}
-                  </span>
+                  {isVergePart(party) && (
+                    <VergemålDetaljer grupper={getVergemålGruppert(party)} />
+                  )}
                 </li>
               ))}
             </ul>
