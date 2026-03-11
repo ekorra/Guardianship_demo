@@ -100,7 +100,7 @@ export default async function DashboardPage() {
 
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">
-            Hvem du er verge for
+            Fullmakter
           </h2>
 
           {altinnError ? (
