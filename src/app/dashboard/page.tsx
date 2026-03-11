@@ -59,43 +59,21 @@ export default async function DashboardPage() {
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <p className="text-sm text-gray-500 mb-3">Innlogget som</p>
-          <dl className="space-y-1 text-sm">
-            <div className="flex gap-4">
-              <dt className="w-28 text-gray-400 shrink-0">Fullt navn</dt>
-              <dd className="font-medium text-gray-800">
-                {session.user?.name ?? (
-                  <span className="italic text-gray-400">ikke tilgjengelig</span>
-                )}
-              </dd>
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Innlogget som</p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+              <span className="text-lg font-semibold text-blue-700">
+                {session.user?.name?.charAt(0) ?? "?"}
+              </span>
             </div>
-            <div className="flex gap-4">
-              <dt className="w-28 text-gray-400 shrink-0">Fornavn</dt>
-              <dd className="text-gray-700">
-                {session.user?.given_name ?? (
-                  <span className="italic text-gray-400">ikke tilgjengelig</span>
-                )}
-              </dd>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-semibold text-gray-900 truncate">
+                {session.user?.name ?? <span className="italic text-gray-400 font-normal text-sm">ikke tilgjengelig</span>}
+              </p>
+              <p className="text-sm text-gray-400 font-mono mt-0.5">{pid ?? "—"}</p>
             </div>
-            <div className="flex gap-4">
-              <dt className="w-28 text-gray-400 shrink-0">Etternavn</dt>
-              <dd className="text-gray-700">
-                {session.user?.family_name ?? (
-                  <span className="italic text-gray-400">ikke tilgjengelig</span>
-                )}
-              </dd>
-            </div>
-            <div className="flex gap-4">
-              <dt className="w-28 text-gray-400 shrink-0">Fødselsnummer</dt>
-              <dd className="font-mono text-gray-700">{pid ?? "—"}</dd>
-            </div>
-            {pid && (
-              <div className="flex gap-4 pt-2">
-                <dt className="w-28 text-gray-400 shrink-0">Tilgang (deg selv)</dt>
-                <dd><TilgangKnapp resourcePid={pid} /></dd>
-              </div>
-            )}
-          </dl>
+            {pid && <TilgangKnapp resourcePid={pid} />}
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm p-6">
@@ -112,12 +90,17 @@ export default async function DashboardPage() {
               Ingen registrerte vergemål funnet.
             </p>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <ul className="space-y-3">
               {parties.filter((party) => party.personId !== pid).map((party) => (
-                <li key={party.partyUuid} className="py-3">
-                  <div className="flex items-start gap-4">
+                <li key={party.partyUuid} className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center shrink-0">
+                      <span className="text-sm font-semibold text-gray-500">
+                        {party.name.charAt(0)}
+                      </span>
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800">
+                      <p className="text-sm font-semibold text-gray-900 truncate">
                         {party.name}
                       </p>
                       <p className="text-xs text-gray-400 font-mono mt-0.5">
@@ -126,11 +109,9 @@ export default async function DashboardPage() {
                           : party.organizationNumber ?? "—"}
                       </p>
                     </div>
-                    <div className="flex gap-1.5 shrink-0 items-center">
-                      {party.type === "Person" && party.personId && (
-                        <TilgangKnapp resourcePid={party.personId} />
-                      )}
-                    </div>
+                    {party.type === "Person" && party.personId && (
+                      <TilgangKnapp resourcePid={party.personId} />
+                    )}
                   </div>
                   {isVergePart(party) && (
                     <VergemålDetaljer grupper={getVergemålGruppert(party, metaMap)} tittel="Vergemålsfullmakter" variant="vergemål" />
