@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth"
 import { getAuthorizedParties, isVergePart, getVergemålGruppert } from "@/lib/altinn"
 import type { AuthorizedParty } from "@/lib/altinn"
+import { getAccessPackageMetadata } from "@/lib/accesspackages"
+import type { AccessPackageMeta } from "@/lib/accesspackages"
 import type { TraceEntry } from "@/lib/trace"
 import { DevPanel } from "@/components/DevPanel"
 import { VergemålDetaljer } from "@/components/VergemålDetaljer"
@@ -19,14 +21,24 @@ export default async function DashboardPage() {
   const pid = session.user?.pid
   let parties: AuthorizedParty[] = []
   let altinnError: string | null = null
+  let metaMap: Map<string, AccessPackageMeta> = new Map()
   const traces: TraceEntry[] = []
 
   if (pid) {
-    try {
-      parties = await getAuthorizedParties(pid, isDev ? traces : undefined)
-    } catch (e) {
+    const [partiesResult, metaResult] = await Promise.allSettled([
+      getAuthorizedParties(pid, isDev ? traces : undefined),
+      getAccessPackageMetadata(),
+    ])
+    if (partiesResult.status === "fulfilled") {
+      parties = partiesResult.value
+    } else {
       altinnError =
-        e instanceof Error ? e.message : "Ukjent feil ved henting fra Altinn"
+        partiesResult.reason instanceof Error
+          ? partiesResult.reason.message
+          : "Ukjent feil ved henting fra Altinn"
+    }
+    if (metaResult.status === "fulfilled") {
+      metaMap = metaResult.value
     }
   }
 
@@ -129,7 +141,7 @@ export default async function DashboardPage() {
                     </div>
                   </div>
                   {isVergePart(party) && (
-                    <VergemålDetaljer grupper={getVergemålGruppert(party)} />
+                    <VergemålDetaljer grupper={getVergemålGruppert(party, metaMap)} />
                   )}
                 </li>
               ))}

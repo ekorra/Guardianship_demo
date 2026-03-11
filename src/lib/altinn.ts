@@ -1,6 +1,6 @@
 import { getMaskinportenToken } from "./maskinporten"
 import type { TraceEntry } from "./trace"
-import { VERGEMAL_PAKKER } from "./vergemal-pakker"
+import type { AccessPackageMeta } from "./accesspackages"
 
 const SCOPE = "altinn:accessmanagement/authorizedparties.resourceowner"
 const BASE_URL = "https://platform.tt02.altinn.no/accessmanagement/api/v1"
@@ -51,20 +51,22 @@ export interface VergemålGruppe {
   pakker: VergemålPakkeStatus[]
 }
 
-export function getVergemålGruppert(party: AuthorizedParty): VergemålGruppe[] {
+export function getVergemålGruppert(
+  party: AuthorizedParty,
+  metaMap: Map<string, AccessPackageMeta>,
+): VergemålGruppe[] {
   const mottatt = new Set(
-    party.authorizedAccessPackages
-      .filter((pkg) => pkg.startsWith("vergemal-"))
-      .map((pkg) => pkg.slice("vergemal-".length)),
+    party.authorizedAccessPackages.filter((pkg) => pkg.startsWith("vergemal-")),
   )
 
   const gruppeMap = new Map<string, VergemålPakkeStatus[]>()
-  for (const pakke of VERGEMAL_PAKKER) {
-    if (!gruppeMap.has(pakke.område)) gruppeMap.set(pakke.område, [])
-    gruppeMap.get(pakke.område)!.push({
-      identifier: pakke.identifier,
-      tittelNb: pakke.tittelNb,
-      mottatt: mottatt.has(pakke.identifier),
+  for (const [identifier, meta] of metaMap) {
+    if (!identifier.startsWith("vergemal-")) continue
+    if (!gruppeMap.has(meta.område)) gruppeMap.set(meta.område, [])
+    gruppeMap.get(meta.område)!.push({
+      identifier,
+      tittelNb: meta.tittelNb,
+      mottatt: mottatt.has(identifier),
     })
   }
 
