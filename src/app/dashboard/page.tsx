@@ -4,6 +4,7 @@ import type { AuthorizedParty } from "@/lib/altinn"
 import type { TraceEntry } from "@/lib/trace"
 import { DevPanel } from "@/components/DevPanel"
 import { VergemålDetaljer } from "@/components/VergemålDetaljer"
+import { TilgangKnapp } from "@/components/TilgangKnapp"
 import { redirect } from "next/navigation"
 
 const isDev = process.env.NODE_ENV === "development"
@@ -76,6 +77,12 @@ export default async function DashboardPage() {
               <dt className="w-28 text-gray-400 shrink-0">Fødselsnummer</dt>
               <dd className="font-mono text-gray-700">{pid ?? "—"}</dd>
             </div>
+            {pid && (
+              <div className="flex gap-4 pt-2">
+                <dt className="w-28 text-gray-400 shrink-0">Tilgang (deg selv)</dt>
+                <dd><TilgangKnapp resourcePid={pid} /></dd>
+              </div>
+            )}
           </dl>
         </div>
 
@@ -107,7 +114,7 @@ export default async function DashboardPage() {
                           : party.organizationNumber ?? "—"}
                       </p>
                     </div>
-                    <div className="flex gap-1.5 shrink-0">
+                    <div className="flex gap-1.5 shrink-0 items-center">
                       <span className="text-xs text-gray-400 bg-gray-100 rounded px-2 py-0.5">
                         {party.type === "Person" ? "Person" : "Organisasjon"}
                       </span>
@@ -115,6 +122,9 @@ export default async function DashboardPage() {
                         <span className="text-xs text-blue-700 bg-blue-100 rounded px-2 py-0.5">
                           Verge
                         </span>
+                      )}
+                      {party.type === "Person" && party.personId && (
+                        <TilgangKnapp resourcePid={party.personId} />
                       )}
                     </div>
                   </div>

@@ -6,14 +6,15 @@ interface TokenCache {
   expiresAt: number
 }
 
-let cache: TokenCache | null = null
+const cache = new Map<string, TokenCache>()
 
 export async function getMaskinportenToken(
   scope: string,
   traces?: TraceEntry[],
 ): Promise<string> {
-  if (cache && Date.now() < cache.expiresAt) {
-    return cache.token
+  const cached = cache.get(scope)
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.token
   }
 
   const clientId = process.env.MASKINPORTEN_CLIENT_ID
@@ -49,10 +50,22 @@ export async function getMaskinportenToken(
     }),
   })
 
+  const durationMs = Date.now() - t0
+
   if (!response.ok) {
-    const error = await response.text()
+    const errorBody = await response.text()
+    traces?.push({
+      name: "Maskinporten token",
+      request: {
+        method: "POST",
+        url: tokenUrl,
+        body: { grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", scope },
+      },
+      response: { status: response.status, body: errorBody },
+      durationMs,
+    })
     throw new Error(
-      `Maskinporten token-forespørsel feilet: ${response.status} ${error}`
+      `Maskinporten token-forespørsel feilet: ${response.status} ${errorBody}`
     )
   }
 
@@ -72,18 +85,19 @@ export async function getMaskinportenToken(
       status: response.status,
       body: { access_token: "[REDACTED]", expires_in: data.expires_in },
     },
-    durationMs: Date.now() - t0,
+    durationMs,
   })
 
-  cache = {
+  const entry: TokenCache = {
     token: data.access_token,
     expiresAt: Date.now() + (data.expires_in - 10) * 1000,
   }
+  cache.set(scope, entry)
 
-  return cache.token
+  return entry.token
 }
 
 /** Kun for testing — tilbakestiller in-memory cache */
 export function _resetTokenCache() {
-  cache = null
+  cache.clear()
 }

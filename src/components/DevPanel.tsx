@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { TraceEntry } from "@/lib/trace"
 
 function DevIcon() {
@@ -69,8 +69,18 @@ function TraceItem({ entry }: { entry: TraceEntry }) {
   )
 }
 
-export function DevPanel({ traces }: { traces: TraceEntry[] }) {
+export function DevPanel({ traces: initialTraces }: { traces: TraceEntry[] }) {
   const [open, setOpen] = useState(false)
+  const [traces, setTraces] = useState(initialTraces)
+
+  useEffect(() => {
+    function onDevTrace(e: Event) {
+      const entries = (e as CustomEvent<TraceEntry[]>).detail
+      setTraces((prev) => [...prev, ...entries])
+    }
+    window.addEventListener("dev-trace", onDevTrace)
+    return () => window.removeEventListener("dev-trace", onDevTrace)
+  }, [])
 
   return (
     <>

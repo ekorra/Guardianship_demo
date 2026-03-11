@@ -93,11 +93,13 @@ export async function getAuthorizedParties(
   const requestBody = { type: "urn:altinn:person:identifier-no", value: pid }
   const t0 = Date.now()
 
+  const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
   const response = await fetch(altinnUrl, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
+      ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
     },
     body: JSON.stringify(requestBody),
   })
