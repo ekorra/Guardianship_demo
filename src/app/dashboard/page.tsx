@@ -127,29 +127,16 @@ export default async function DashboardPage() {
                       </p>
                     </div>
                     <div className="flex gap-1.5 shrink-0 items-center">
-                      <span className="text-xs text-gray-400 bg-gray-100 rounded px-2 py-0.5">
-                        {party.type === "Person" ? "Person" : "Organisasjon"}
-                      </span>
-                      {isVergePart(party) && (
-                        <span className="text-xs text-blue-700 bg-blue-100 rounded px-2 py-0.5">
-                          Vergemål
-                        </span>
-                      )}
-                      {isInnbyggerPart(party) && (
-                        <span className="text-xs text-green-700 bg-green-100 rounded px-2 py-0.5">
-                          Innbygger fullmakt
-                        </span>
-                      )}
                       {party.type === "Person" && party.personId && (
                         <TilgangKnapp resourcePid={party.personId} />
                       )}
                     </div>
                   </div>
                   {isVergePart(party) && (
-                    <VergemålDetaljer grupper={getVergemålGruppert(party, metaMap)} tittel="vergemålsfullmakter" />
+                    <VergemålDetaljer grupper={getVergemålGruppert(party, metaMap)} tittel="Vergemålsfullmakter" variant="vergemål" />
                   )}
                   {isInnbyggerPart(party) && (
-                    <VergemålDetaljer grupper={getInnbyggerGruppert(party, metaMap)} tittel="innbyggerfullmakter" />
+                    <VergemålDetaljer grupper={getInnbyggerGruppert(party, metaMap)} tittel="Innbyggerfullmakter" variant="innbygger" />
                   )}
                 </li>
               ))}
