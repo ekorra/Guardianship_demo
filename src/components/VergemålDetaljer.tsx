@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import type { VergemålGruppe } from "@/lib/altinn"
+import type { PakkeGruppe } from "@/lib/altinn"
 
 interface Props {
-  grupper: VergemålGruppe[]
+  grupper: PakkeGruppe[]
+  tittel?: string
 }
 
 function LockIcon() {
@@ -39,7 +40,7 @@ function ChevronIcon({ open }: { open: boolean }) {
   )
 }
 
-export function VergemålDetaljer({ grupper }: Props) {
+export function VergemålDetaljer({ grupper, tittel = "fullmakter" }: Props) {
   const [sectionOpen, setSectionOpen] = useState(false)
   const [openSet, setOpenSet] = useState<Set<string>>(new Set())
 
@@ -59,7 +60,7 @@ export function VergemålDetaljer({ grupper }: Props) {
         className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 mb-2"
       >
         <ChevronIcon open={sectionOpen} />
-        <span>{sectionOpen ? "Skjul fullmakter" : "Vis fullmakter"}</span>
+        <span>{sectionOpen ? `Skjul ${tittel}` : `Vis ${tittel}`}</span>
       </button>
 
       {sectionOpen && (

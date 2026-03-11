@@ -40,28 +40,35 @@ export function isVergePart(party: AuthorizedParty): boolean {
   )
 }
 
-export interface VergemålPakkeStatus {
+export function isInnbyggerPart(party: AuthorizedParty): boolean {
+  return party.authorizedAccessPackages.some((pkg) =>
+    pkg.startsWith("innbygger-"),
+  )
+}
+
+export interface PakkeStatus {
   identifier: string
   tittelNb: string
   mottatt: boolean
 }
 
-export interface VergemålGruppe {
+export interface PakkeGruppe {
   område: string
-  pakker: VergemålPakkeStatus[]
+  pakker: PakkeStatus[]
 }
 
-export function getVergemålGruppert(
+function getPakkerGruppert(
   party: AuthorizedParty,
   metaMap: Map<string, AccessPackageMeta>,
-): VergemålGruppe[] {
+  prefix: string,
+): PakkeGruppe[] {
   const mottatt = new Set(
-    party.authorizedAccessPackages.filter((pkg) => pkg.startsWith("vergemal-")),
+    party.authorizedAccessPackages.filter((pkg) => pkg.startsWith(prefix)),
   )
 
-  const gruppeMap = new Map<string, VergemålPakkeStatus[]>()
+  const gruppeMap = new Map<string, PakkeStatus[]>()
   for (const [identifier, meta] of metaMap) {
-    if (!identifier.startsWith("vergemal-")) continue
+    if (!identifier.startsWith(prefix)) continue
     if (!gruppeMap.has(meta.område)) gruppeMap.set(meta.område, [])
     gruppeMap.get(meta.område)!.push({
       identifier,
@@ -72,6 +79,24 @@ export function getVergemålGruppert(
 
   return [...gruppeMap.entries()].map(([område, pakker]) => ({ område, pakker }))
 }
+
+export function getVergemålGruppert(
+  party: AuthorizedParty,
+  metaMap: Map<string, AccessPackageMeta>,
+): PakkeGruppe[] {
+  return getPakkerGruppert(party, metaMap, "vergemal-")
+}
+
+export function getInnbyggerGruppert(
+  party: AuthorizedParty,
+  metaMap: Map<string, AccessPackageMeta>,
+): PakkeGruppe[] {
+  return getPakkerGruppert(party, metaMap, "innbygger-")
+}
+
+// Backwards-compatible type aliases
+export type VergemålPakkeStatus = PakkeStatus
+export type VergemålGruppe = PakkeGruppe
 
 export async function getAuthorizedParties(
   pid: string,

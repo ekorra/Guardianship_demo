@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth"
-import { getAuthorizedParties, isVergePart, getVergemålGruppert } from "@/lib/altinn"
+import { getAuthorizedParties, isVergePart, isInnbyggerPart, getVergemålGruppert, getInnbyggerGruppert } from "@/lib/altinn"
 import type { AuthorizedParty } from "@/lib/altinn"
 import { getAccessPackageMetadata } from "@/lib/accesspackages"
 import type { AccessPackageMeta } from "@/lib/accesspackages"
@@ -132,7 +132,12 @@ export default async function DashboardPage() {
                       </span>
                       {isVergePart(party) && (
                         <span className="text-xs text-blue-700 bg-blue-100 rounded px-2 py-0.5">
-                          Verge
+                          Vergemål
+                        </span>
+                      )}
+                      {isInnbyggerPart(party) && (
+                        <span className="text-xs text-green-700 bg-green-100 rounded px-2 py-0.5">
+                          Innbygger fullmakt
                         </span>
                       )}
                       {party.type === "Person" && party.personId && (
@@ -141,7 +146,10 @@ export default async function DashboardPage() {
                     </div>
                   </div>
                   {isVergePart(party) && (
-                    <VergemålDetaljer grupper={getVergemålGruppert(party, metaMap)} />
+                    <VergemålDetaljer grupper={getVergemålGruppert(party, metaMap)} tittel="vergemålsfullmakter" />
+                  )}
+                  {isInnbyggerPart(party) && (
+                    <VergemålDetaljer grupper={getInnbyggerGruppert(party, metaMap)} tittel="innbyggerfullmakter" />
                   )}
                 </li>
               ))}
