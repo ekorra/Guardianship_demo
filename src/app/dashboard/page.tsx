@@ -101,7 +101,7 @@ export default async function DashboardPage() {
             </p>
           ) : (
             <ul className="divide-y divide-gray-100">
-              {parties.map((party) => (
+              {parties.filter((party) => party.personId !== pid).map((party) => (
                 <li key={party.partyUuid} className="py-3">
                   <div className="flex items-start gap-4">
                     <div className="flex-1 min-w-0">
