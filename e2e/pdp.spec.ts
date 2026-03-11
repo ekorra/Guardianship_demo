@@ -20,13 +20,13 @@ test("Sjekk tilgang-knapp vises og badge rendres etter klikk (selv)", async ({
   await loggInn(page)
 
   // Finn selv-sjekk-knappen i brukerinfo-kortet
-  const selfCheck = page.locator("dl").getByRole("button", { name: /sjekk tilgang/i })
+  const selfCheck = page.locator("[data-testid='user-info']").getByRole("button", { name: /sjekk tilgang/i })
   await expect(selfCheck).toBeVisible()
 
   await selfCheck.click()
 
   // Badge skal vises — ett av de tre utfallene
-  const badge = page.locator("dl").locator("span").filter({
+  const badge = page.locator("[data-testid='user-info']").locator("span").filter({
     hasText: /tilgang|ingen tilgang|ikke aktuelt/i,
   })
   await expect(badge).toBeVisible({ timeout: 10_000 })

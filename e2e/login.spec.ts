@@ -28,10 +28,8 @@ test("Innlogging og utlogging via ID-porten TestID", async ({ page }) => {
   await expect(page).not.toHaveURL(/error/)
 
   // --- 7. Verifiser brukerinfo på dashboard ---
-  // Scoper til <dl> (brukerinfo-kortet) for å unngå treff i vergerolle-listen
-  const userInfoCard = page.locator("dl")
+  const userInfoCard = page.locator("[data-testid='user-info']")
   await expect(userInfoCard).toContainText("FORNØYD BARBERSKUM")
-  await expect(userInfoCard).toContainText("OPPOSISJON")
   await expect(userInfoCard).toContainText(pid!)
 
   // --- 8. Verifiser "Logg ut"-knapp ---

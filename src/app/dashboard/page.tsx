@@ -58,7 +58,7 @@ export default async function DashboardPage() {
       </nav>
 
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6" data-testid="user-info">
           <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Innlogget som</p>
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
