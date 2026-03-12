@@ -7,6 +7,7 @@ import type { TraceEntry } from "@/lib/trace"
 import { DevPanel } from "@/components/DevPanel"
 import { VergemålDetaljer } from "@/components/VergemålDetaljer"
 import { TilgangKnapp } from "@/components/TilgangKnapp"
+import { ResourceVelger } from "@/components/ResourceVelger"
 import { redirect } from "next/navigation"
 
 const isDev = process.env.NODE_ENV === "development"
@@ -75,6 +76,8 @@ export default async function DashboardPage() {
             {pid && <TilgangKnapp resourcePid={pid} />}
           </div>
         </div>
+
+        <ResourceVelger />
 
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">

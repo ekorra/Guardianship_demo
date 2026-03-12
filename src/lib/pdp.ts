@@ -7,6 +7,7 @@ const EXCHANGE_URL =
 const PDP_URL =
   "https://platform.tt02.altinn.no/authorization/api/v1/authorize"
 const DEFAULT_RESOURCE_ID = "ttd-vergemalsdemo"
+const DEFAULT_ACTION = "read"
 
 async function exchangeForAltinnToken(
   maskinportenToken: string,
@@ -48,7 +49,7 @@ async function exchangeForAltinnToken(
 
 export type PdpDecision = "Permit" | "Deny" | "NotApplicable" | "Indeterminate"
 
-function buildXacmlRequest(subjectPid: string, resourcePid: string, resourceId: string) {
+function buildXacmlRequest(subjectPid: string, resourcePid: string, resourceId: string, action: string) {
   return {
     AccessSubject: [
       {
@@ -65,7 +66,7 @@ function buildXacmlRequest(subjectPid: string, resourcePid: string, resourceId: 
         Attribute: [
           {
             AttributeId: "urn:oasis:names:tc:xacml:1.0:action:action-id",
-            Value: "read",
+            Value: action,
             DataType: "http://www.w3.org/2001/XMLSchema#string",
           },
         ],
@@ -93,12 +94,13 @@ export async function checkPdpAccess(
   resourcePid: string,
   traces?: TraceEntry[],
   resourceId: string = DEFAULT_RESOURCE_ID,
+  action: string = DEFAULT_ACTION,
 ): Promise<PdpDecision> {
   const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
   const maskinportenToken = await getMaskinportenToken(SCOPE, traces)
   const altinnToken = await exchangeForAltinnToken(maskinportenToken, subscriptionKey, traces)
 
-  const requestBody = { Request: buildXacmlRequest(subjectPid, resourcePid, resourceId) }
+  const requestBody = { Request: buildXacmlRequest(subjectPid, resourcePid, resourceId, action) }
   const t0 = Date.now()
 
   const response = await fetch(PDP_URL, {

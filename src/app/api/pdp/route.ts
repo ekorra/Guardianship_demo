@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 })
   }
 
-  const body = (await req.json()) as { resourcePid?: string; resourceId?: string }
+  const body = (await req.json()) as { resourcePid?: string; resourceId?: string; action?: string }
   const resourcePid = body.resourcePid
   if (!resourcePid) {
     return NextResponse.json({ error: "resourcePid mangler" }, { status: 400 })
@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
       resourcePid,
       isDev ? traces : undefined,
       body.resourceId,
+      body.action,
     )
     return NextResponse.json({ decision, traces: isDev ? traces : undefined })
   } catch (e) {
