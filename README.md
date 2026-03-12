@@ -1,6 +1,6 @@
 # Vergeportalen — Demo-app
 
-Demo-applikasjon som viser vergemålsinformasjon for innlogget bruker. Appen autentiserer via ID-porten og henter rolledata fra Altinn via Maskinporten.
+Demo-applikasjon som viser vergemålsinformasjon for innlogget bruker. Appen autentiserer via ID-porten, henter vergeparter og tilgangspakker fra Altinn via Maskinporten, og lar bruker sjekke PDP-tilgang mot valgbare Altinn-ressurser.
 
 ## Arkitektur
 
@@ -12,9 +12,10 @@ Next.js 16 (App Router)
   │  Auth.js v5  ──── ID-porten (OIDC, test.idporten.no)
   │                    Innlogging og navn på bruker
   │
-  ├── /dashboard    Server Component — viser innlogget bruker og vergerolle
+  ├── /dashboard    Server Component — viser innlogget bruker, vergeparter og tilgangspakker
   ├── /login        Innloggingsside
-  └── /api/logout   RP-initiated logout mot ID-porten
+  ├── /api/logout   RP-initiated logout mot ID-porten
+  └── /api/pdp      PDP-proxy — sjekker tilgang i Altinn Autorisasjon
   │
   ▼
 Maskinporten (test.maskinporten.no)
@@ -22,7 +23,9 @@ Maskinporten (test.maskinporten.no)
   │
   ▼
 Altinn Autorisasjon API
-  Henter vergerolle (hvem brukeren er verge for)
+  ├── Henter vergeparter og tilgangspakker (hvem brukeren er verge for)
+  ├── Henter metadata for tilgangspakker (navn, område)
+  └── PDP-sjekk (XACML JSON Profile) mot valgt ressurs
 ```
 
 ### Nøkkelteknologier
@@ -33,7 +36,7 @@ Altinn Autorisasjon API
 | [Auth.js v5](https://authjs.dev) | Autentisering og sesjonshåndtering |
 | [ID-porten](https://docs.digdir.no/docs/idporten/) | Norsk nasjonal innloggingstjeneste (OIDC) |
 | [Maskinporten](https://docs.digdir.no/docs/Maskinporten/) | Machine-to-machine autentisering |
-| [Altinn](https://docs.altinn.studio/api/) | Hente vergerolle og rolledata |
+| [Altinn](https://docs.altinn.studio/api/) | Vergeparter, tilgangspakke-metadata og PDP-sjekk |
 | [jose](https://github.com/panva/jose) | JWT-signering for Maskinporten-assertion |
 | [Vitest](https://vitest.dev) | Enhetstester og integrasjonstester |
 
@@ -129,24 +132,32 @@ src/
 ├── app/
 │   ├── api/
 │   │   ├── auth/[...nextauth]/route.ts  # Auth.js handler (callback, session)
-│   │   └── logout/route.ts             # RP-initiated logout mot ID-porten
+│   │   ├── logout/route.ts             # RP-initiated logout mot ID-porten
+│   │   └── pdp/route.ts               # PDP-proxy — videresender tilgangssjekk til Altinn
 │   ├── dashboard/page.tsx              # Hovedside etter innlogging
 │   ├── login/page.tsx                  # Innloggingsside
 │   └── page.tsx                        # Rot — redirect til /dashboard
 ├── components/
-│   └── DevPanel.tsx                    # Debug-panel for API-kall (kun dev-modus)
+│   ├── DevPanel.tsx                    # Debug-panel for API-kall (kun dev-modus)
+│   ├── ResourceVelger.tsx              # Felles ressursvelger med localStorage-persistering
+│   ├── TilgangKnapp.tsx               # Knapp for PDP-tilgangssjekk, lytter på ressursskifte
+│   └── VergemålDetaljer.tsx           # Accordion for tilgangspakker per vergeperson
 ├── lib/
+│   ├── accesspackages.ts              # Henter og cacher tilgangspakke-metadata fra Altinn
+│   ├── altinn.ts                       # Henter vergeparter og grupperer tilgangspakker
 │   ├── auth.ts                         # Auth.js v5-konfigurasjon (ID-porten OIDC)
-│   ├── altinn.ts                       # Henter vergerolle fra Altinn API
 │   ├── maskinporten.ts                 # Henter og cacher Maskinporten-token
+│   ├── pdp.ts                          # XACML-forespørsel mot Altinn PDP
+│   ├── resources.ts                   # Prekonfigurerte ressurser og localStorage-nøkler
 │   ├── trace.ts                        # TraceEntry-type for API-sporing i dev-modus
 │   ├── *.test.ts                       # Enhetstester (Vitest, mocker fetch)
 │   └── *.integration.test.ts          # Integrasjonstester mot eksterne API-er
-├── proxy.ts                            # Rutebeskyttelse (Next.js 16 middleware)
+├── middleware.ts                       # Rutebeskyttelse (Next.js middleware)
 └── types/
     └── next-auth.d.ts                  # Typeuttvidelse for sesjon (pid, navn, idToken)
 e2e/
-└── login.spec.ts                       # Playwright e2e-test — innlogging og utlogging
+├── login.spec.ts                       # Playwright e2e-test — innlogging og utlogging
+└── pdp.spec.ts                        # Playwright e2e-test — tilgangssjekk-knapp
 ```
 
 ## Viktige konfigurasjonsdetaljer
@@ -171,6 +182,22 @@ const parties = await getAuthorizedParties(pid, traces)
 ```
 
 `access_token` fra Maskinporten er alltid redaktet (`[REDACTED]`) i trace-loggen. Panelet rendres ikke i produksjon.
+
+### Ressursvelger og PDP-tilgangssjekk
+
+Dashboard viser en **ressursvelger** der bruker kan velge hvilken Altinn-ressurs det skal sjekkes tilgang mot. Valget deles av alle «Sjekk tilgang»-knapper på siden via en custom DOM-event (`resource-change`).
+
+**Prekonfigurerte ressurser** er definert i `src/lib/resources.ts`. Bruker kan i tillegg legge til egne ressurser med tre felt:
+
+| Felt | Beskrivelse |
+|------|-------------|
+| Ressurs-ID | Altinn-ressurs-ID, f.eks. `ttd-vergemalsdemo` |
+| Navn | Visningsnavn (fylles inn automatisk hvis tomt) |
+| Action | XACML-action, standard `read` |
+
+Egendefinerte ressurser lagres i `localStorage` og gjenopprettes ved neste besøk.
+
+«Sjekk tilgang»-knappen per person sender en XACML JSON-forespørsel til `/api/pdp` som videresender til Altinn Autorisasjon PDP. Mulige svar: `Permit`, `Deny`, `NotApplicable`, `Indeterminate`.
 
 ## Oppgaveoversikt
 
