@@ -44,12 +44,11 @@ export function ResourceVelger() {
     if (showAdd) addInputRef.current?.focus()
   }, [showAdd])
 
-  function dispatchChange(id: string) {
-    const resource = allResources.find((r) => r.id === id)
-    const action = resource?.action ?? "read"
+  function dispatchChange(id: string, action?: string) {
+    const resolved = action ?? allResources.find((r) => r.id === id)?.action ?? "read"
     localStorage.setItem(LOCALSTORAGE_SELECTED_KEY, id)
     window.dispatchEvent(
-      new CustomEvent(RESOURCE_CHANGE_EVENT, { detail: { id, action } }),
+      new CustomEvent(RESOURCE_CHANGE_EVENT, { detail: { id, action: resolved } }),
     )
   }
 
@@ -67,7 +66,7 @@ export function ResourceVelger() {
     setCustomResources(updated)
     saveCustomResources(updated)
     setSelectedId(id)
-    dispatchChange(id)
+    dispatchChange(id, action)
     setNewId("")
     setNewLabel("")
     setNewAction("")

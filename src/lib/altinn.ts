@@ -94,10 +94,6 @@ export function getInnbyggerGruppert(
   return getPakkerGruppert(party, metaMap, "innbygger-")
 }
 
-// Backwards-compatible type aliases
-export type VergemålPakkeStatus = PakkeStatus
-export type VergemålGruppe = PakkeGruppe
-
 export async function getAuthorizedParties(
   pid: string,
   traces?: TraceEntry[],
