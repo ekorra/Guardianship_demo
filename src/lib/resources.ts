@@ -6,9 +6,9 @@ export interface Resource {
 
 export const PRECONFIGURED_RESOURCES: Resource[] = [
   { id: "ttd-vergemalsdemo", label: "Vergmålsdemo (TTD)" },
+  { id: "ttd-fullmaktdemo", label: "Fullmaktdemo (TTD)" },
   { id: "nav-dagpenger", label: "Dagpenger (NAV)" },
   { id: "skd-skattemelding", label: "Skattemelding (Skatteetaten)" },
-  { id: "hdir-helsenorge", label: "Helsenorge (Helsedirektoratet)" },
   { id: "brg-firmaopplysninger", label: "Firmaopplysninger (Brønnøysund)" },
 ]
 
