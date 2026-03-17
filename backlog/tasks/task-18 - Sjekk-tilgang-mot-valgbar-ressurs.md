@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@espen'
 created_date: '2026-03-12 05:47'
-updated_date: '2026-03-12 06:52'
+updated_date: '2026-03-13 06:12'
 labels: []
 dependencies: []
 ---
@@ -43,16 +43,18 @@ TilgangKnapp sjekker i dag kun mot én hardkodet ressurs. Brukeren skal kunne ve
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Lagt til ressursvelger i TilgangKnapp.
+Lagt til felles ressursvelger (ResourceVelger) som vises én gang på dashboard over partslisten.
 
 Endringer:
-- Ny `src/lib/resources.ts` med 5 prekonfigurerte ressurser og localStorage-nøkkel
-- `src/lib/pdp.ts`: `checkPdpAccess` tar nå valgfri `resourceId`-parameter (default: ttd-vergemalsdemo)
-- `src/app/api/pdp/route.ts`: leser og videresender `resourceId` fra request body
-- `src/components/TilgangKnapp.tsx` omskrevet med:
-  - `<select>` med prekonfigurerte + egendefinerte ressurser
-  - «+»-knapp som åpner inline-skjema for å legge til ny ressurs (id + valgfritt navn)
-  - Egendefinerte ressurser lagres i localStorage og gjenopprettes ved neste besøk
-  - Badge nullstilles automatisk ved ressursskifte
-  - «✕»-knapp for å manuelt nullstille badge
+- src/lib/resources.ts: Resource-type med valgfri action, 5 prekonfigurerte ressurser (ttd-vergemalsdemo + 4 plausible demo-ressurser), constants for localStorage-nøkler og custom event-navn
+- src/components/ResourceVelger.tsx: Nedtrekksliste med alle ressurser, action-visning, skjult "+ Legg til"-skjema med felt for ressurs-ID, navn og action. Egendefinerte ressurser lagres i localStorage.
+- src/components/TilgangKnapp.tsx: Lytter på resource-change-event og localStorage; resetter tilgangsstatus ved ressursbytte
+- src/app/dashboard/page.tsx: ResourceVelger rendres én gang over partslisten; TilgangKnapp mottar kun resourcePid
+
+Opprydning i samme PR:
+- Slettet vergemal-pakker.ts (58 linjers dødkode)
+- Fjernet ubrukte type-aliaser i altinn.ts
+- Fikset closure-bug i addCustomResource (action ble alltid "read" for ny ressurs)
+
+Tester: 31/31 unit-tester passerer. E2e-test for partsliste hoppes over om testbruker mangler vergeparter.
 <!-- SECTION:FINAL_SUMMARY:END -->
