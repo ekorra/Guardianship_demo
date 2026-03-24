@@ -8,6 +8,7 @@ export async function GET() {
 
   const cookieStore = await cookies()
   cookieStore.delete("authjs.session-token")
+  cookieStore.delete("__Secure-authjs.session-token")
 
   if (idToken) {
     const logoutUrl = new URL("https://login.test.idporten.no/logout")
