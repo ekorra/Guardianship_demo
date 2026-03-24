@@ -16,7 +16,7 @@ test("Innlogging og utlogging via ID-porten TestID", async ({ page }) => {
   await page.waitForURL(/test\.idporten\.no/, { timeout: 15_000 })
 
   // --- 4. Velg "TestID på nivå høyt" ---
-  await page.getByRole("link", { name: /testid på nivå høyt/i }).click()
+  await page.getByRole("link", { name: /testid/i }).first().click()
 
   // --- 5. Fyll inn fødselsnummer og autentiser ---
   await page.getByLabel(/personidentifikator/i).fill(pid!)

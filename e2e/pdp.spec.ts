@@ -8,7 +8,7 @@ async function loggInn(page: Parameters<Parameters<typeof test>[1]>[0]) {
   await page.goto("/login")
   await page.getByRole("button", { name: /logg inn med id-porten/i }).click()
   await page.waitForURL(/test\.idporten\.no/, { timeout: 15_000 })
-  await page.getByRole("link", { name: /testid på nivå høyt/i }).click()
+  await page.getByRole("link", { name: /testid/i }).first().click()
   await page.getByLabel(/personidentifikator/i).fill(pid!)
   await page.getByRole("button", { name: /autentiser/i }).click()
   await page.waitForURL("**/dashboard", { timeout: 15_000 })
