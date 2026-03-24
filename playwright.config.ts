@@ -6,11 +6,12 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   fullyParallel: false, // kjør sekvensielt — auth-flyt er stateful
   retries: 0,
-  reporter: "list",
+  reporter: [["list"], ["html", { outputFolder: "playwright-report", open: "never" }]],
   use: {
     baseURL: "http://localhost:3000",
     ...devices["Desktop Chrome"],
     headless: true,
+    screenshot: "only-on-failure",
   },
   webServer: {
     command: "npm run dev",
