@@ -2,35 +2,67 @@
 # Vergeportalen — Prosjektinstruksjoner
 
 ## Hva er dette?
-Next.js 16 demo-app (App Router) som viser vergemålsinformasjon for innlogget bruker via ID-porten og Altinn.
+Next.js 15 demo-app (App Router) som viser vergemåls- og innbyggerfullmakter for innlogget bruker via ID-porten og Altinn Access Management API.
 
 ## Viktige filer
-- `src/lib/auth.ts` — Auth.js v5-konfigurasjon med ID-porten OIDC
-- `src/lib/maskinporten.ts` — Maskinporten-token (henter og cacher)
-- `src/app/dashboard/page.tsx` — Dashboard (Server Component)
-- `src/app/api/logout/route.ts` — RP-initiated logout
+
+### Autentisering og sesjon
+- `src/lib/auth.ts` — Auth.js v5-konfigurasjon med ID-porten OIDC (støtter `private_key_jwt` og `client_secret_post`)
 - `src/middleware.ts` — Rutebeskyttelse
+- `src/app/api/logout/route.ts` — RP-initiated logout mot ID-porten
 - `src/types/next-auth.d.ts` — Session-typeuttvidelse (pid, given_name, family_name, idToken)
+
+### Altinn-integrasjon
+- `src/lib/maskinporten.ts` — Maskinporten-token (henter og cacher per scope)
+- `src/lib/altinn.ts` — `getAuthorizedParties`, `isVergePart`, `isInnbyggerPart`, `getVergemålGruppert`, `getInnbyggerGruppert`
+- `src/lib/accesspackages.ts` — Henter og cacher pakke-metadata fra Altinn AM eksport-API (1t TTL)
+- `src/lib/pdp.ts` — PDP-sjekk mot Altinn Authorization API (XACML JSON Profile)
+
+### UI-komponenter
+- `src/app/dashboard/page.tsx` — Dashboard (Server Component)
+- `src/components/VergemålDetaljer.tsx` — Accordion-liste over tilgangspakker (`variant="vergemål"|"innbygger"`)
+- `src/components/TilgangKnapp.tsx` — Knapp for å sjekke PDP-tilgang; lytter på `resource-change`-event
+- `src/components/ResourceVelger.tsx` — Felles ressursvelger (nedtrekksliste + legg-til-skjema med action-felt)
+- `src/components/DevPanel.tsx` — Dev-panel for å vise API-traces
+
+### Konfigurasjon og CI/CD
+- `src/lib/resources.ts` — 5 prekonfigurerte ressurser, localStorage-nøkler, event-navn
+- `.github/workflows/ci.yml` — CI: unit → e2e → Vercel prod-deploy (deploy kun når begge grønne)
+
+## Arkitektur: delt ressursvalg uten React Context
+`ResourceVelger` dispatches `new CustomEvent("resource-change", { detail: { id, action } })` og skriver til `localStorage`. `TilgangKnapp` lytter via `useEffect`. Dette unngår å wrappe Server Components i en klient-context-provider.
 
 ## Kjente tekniske fallgruver
 
 ### ID-porten
-- **Påkrevd**: `client: { token_endpoint_auth_method: "client_secret_post" }` i provider-config — standard `basic` avvises av ID-porten
-- **Scopes**: `openid profile` (gir tilgang til `given_name` og `family_name`)
+- **Primær auth-metode**: `private_key_jwt` via `IDPORTEN_PRIVATE_KEY_JWK` — fallback til `client_secret_post` hvis env-variabelen mangler
+- **oauth4webapi aud-bug**: `oauth4webapi` sender `aud` som array `[issuer, token_endpoint]` for `private_key_jwt` — ID-porten krever string. Løst med `[customFetch]` fra `@auth/core` som re-signerer JWT med korrekt `aud`
+- **jose.importJWK** returnerer `KeyObject`, ikke `CryptoKey` — bruk `crypto.subtle.importKey` i stedet
+- **Scopes**: `openid profile` (gir `given_name` og `family_name`)
 - **acr**: `idporten-loa-substantial`
 - **End session endpoint**: `https://login.test.idporten.no/logout` (IKKE `/connect/endsession`)
-- `post_logout_redirect_uri` MÅ registreres i Digdir selvbetjening for klienten
+- `post_logout_redirect_uri` MÅ registreres i Digdir selvbetjening
 
 ### Auth.js v5 logout
 - `signOut({ redirectTo: externalUrl })` støtter IKKE eksterne URLer
-- Løsning: Dedikert `/api/logout` GET-rute som manuelt sletter `authjs.session-token`-cookie og kaller `redirect()` fra `next/navigation`
+- Løsning: Dedikert `/api/logout` GET-rute
+- På HTTPS (Vercel) heter cookie `__Secure-authjs.session-token` — begge varianter må slettes ved logout
 
 ### Maskinporten
-- JWT assertion må inkludere `kid` i protected header — hentes fra JWK-objektet (`jwkObject.kid`)
+- JWT assertion må inkludere `kid` i protected header
 - Assertion er RS256-signert med privatnøkkel fra `MASKINPORTEN_PRIVATE_KEY_JWK` (JWK-format)
-- Token caches in-memory med margin på 10 sekunder før utløp
-- Test-endepunkt: `https://test.maskinporten.no/token`
-- Audience: `https://test.maskinporten.no/`
+- Token caches in-memory per scope med 10 sekunders margin før utløp
+- Test-endepunkt: `https://test.maskinporten.no/token` / Audience: `https://test.maskinporten.no/`
+
+### Altinn PDP (XACML JSON)
+- Request MÅ wrappes i `{ Request: { AccessSubject, Action, Resource } }`
+- Action value: `"read"`, DataType: `"http://www.w3.org/2001/XMLSchema#string"`
+- Maskinporten-token må veksles inn mot Altinn-token før bruk: `GET /authentication/api/v1/exchange/maskinporten`
+- Subscription key sendes som `Ocp-Apim-Subscription-Key`-header
+
+### E2E-tester
+- ID-portens TestID-selector-side er ustabil — `click()` er wrapped i `try/catch` med 5s timeout
+- `STANDARD_BRUKER` / `TEST_PID` env-variabel må settes i CI for at e2e-tester kjøres
 
 ### Testing
 - Enhetstester (`npm test`): mocker `fetch` globalt med `vi.stubGlobal`
@@ -39,10 +71,21 @@ Next.js 16 demo-app (App Router) som viser vergemålsinformasjon for innlogget b
 
 ## Miljøvariabler (.env.local)
 - `AUTH_SECRET` — tilfeldig streng
-- `IDPORTEN_CLIENT_ID` / `IDPORTEN_CLIENT_SECRET` — fra selvbetjening.test.digdir.no
-- `AUTH_URL` — app-URL (lokalt: `http://localhost:3000`)
+- `AUTH_URL` — app-URL (lokalt: `http://localhost:3000`, prod: `https://guardianship-demo.vercel.app`)
+- `IDPORTEN_CLIENT_ID` — fra selvbetjening.test.digdir.no
+- `IDPORTEN_CLIENT_SECRET` — kun nødvendig uten private_key_jwt
+- `IDPORTEN_PRIVATE_KEY_JWK` — RSA privatnøkkel som JWK-JSON (inkluderer `kid`)
 - `MASKINPORTEN_CLIENT_ID` — fra selvbetjening.test.digdir.no
 - `MASKINPORTEN_PRIVATE_KEY_JWK` — RSA privatnøkkel som JWK-JSON (inkluderer `kid`)
+- `ALTINN_SUBSCRIPTION_KEY` — API-nøkkel for Altinn AM (valgfri, men anbefalt)
+
+## CI/CD
+GitHub Actions (`.github/workflows/ci.yml`) har tre jobber:
+1. **Enhetstester** — `npm test` (Vitest)
+2. **E2E-tester** — Playwright mot lokal dev-server
+3. **Deploy til Vercel** — kjøres kun hvis begge over er grønne, kun på push til `main`
+
+Krever GitHub secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `STANDARD_BRUKER` (+ alle env-variabler over)
 
 ---
 
