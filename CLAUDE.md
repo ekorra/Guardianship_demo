@@ -89,6 +89,64 @@ Krever GitHub secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `ST
 
 ---
 
+## Arbeidsprinsipper
+
+### 1. Tenk før du koder
+
+Ikke anta. Ikke skjul usikkerhet. Løft frem avveininger.
+
+Før implementasjon:
+- Oppgi antakelser eksplisitt. Er du usikker, spør.
+- Hvis flere tolkninger finnes, presenter dem — ikke velg stilltiende.
+- Hvis en enklere løsning finnes, si det. Utfordre når det er grunnlag for det.
+- Hvis noe er uklart, stopp. Navngi hva som er forvirrende. Spør.
+
+### 2. Enkelhet først
+
+Minimum kode som løser problemet. Ingenting spekulativt.
+
+- Ingen funksjoner utover det som ble bedt om.
+- Ingen abstraksjoner for engangsbruk.
+- Ingen «fleksibilitet» eller «konfigurerbarhet» som ikke ble etterspurt.
+- Ingen feilhåndtering for umulige scenarioer.
+- Hvis du skriver 200 linjer og det kunne vært 50, skriv om.
+
+Spør deg selv: «Ville en erfaren utvikler si dette er overkomplisert?» Hvis ja, forenkle.
+
+### 3. Kirurgiske endringer
+
+Berør bare det du må. Rydd bare opp i din egen rot.
+
+Ved redigering av eksisterende kode:
+- Ikke «forbedre» tilstøtende kode, kommentarer eller formattering.
+- Ikke refaktorer ting som ikke er ødelagt.
+- Match eksisterende stil, selv om du ville gjort det annerledes.
+- Hvis du oppdager urelatert dødkode, nevn det — ikke slett det.
+
+Når dine endringer skaper foreldreløse elementer:
+- Fjern import/variabler/funksjoner som DINE endringer gjør ubrukte.
+- Ikke fjern pre-eksisterende dødkode med mindre du blir bedt om det.
+
+Testen: Hver endrede linje skal spore direkte til brukerens forespørsel.
+
+### 4. Målstyrt utførelse
+
+Definer suksesskriterier. Loop til verifisert.
+
+Gjør oppgaver om til verifiserbare mål:
+- «Legg til validering» → «Skriv tester for ugyldige inndata, gjør dem grønne»
+- «Fiks buggen» → «Skriv en test som reproduserer den, gjør den grønn»
+- «Refaktorer X» → «Sørg for at tester passerer før og etter»
+
+For flerstegsoppgaver, oppgi en kort plan:
+```
+1. [Steg] → verifiser: [sjekk]
+2. [Steg] → verifiser: [sjekk]
+3. [Steg] → verifiser: [sjekk]
+```
+
+---
+
 <!-- BACKLOG.MD GUIDELINES START -->
 # Instructions for the usage of Backlog.md CLI Tool
 
