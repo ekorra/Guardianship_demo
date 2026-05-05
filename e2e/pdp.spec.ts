@@ -13,7 +13,7 @@ async function loggInn(page: Parameters<Parameters<typeof test>[1]>[0]) {
   } catch {
     // Allerede på PID-input-siden
   }
-  await page.getByLabel(/personidentifikator/i).fill(pid!)
+  await page.getByLabel(/personidentifikator/i).first().fill(pid!)
   await page.getByRole("button", { name: /autentiser/i }).click()
   await page.waitForURL("**/dashboard", { timeout: 15_000 })
 }

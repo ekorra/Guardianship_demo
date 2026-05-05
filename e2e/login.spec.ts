@@ -23,7 +23,7 @@ test("Innlogging og utlogging via ID-porten TestID", async ({ page }) => {
   }
 
   // --- 5. Fyll inn fødselsnummer og autentiser ---
-  await page.getByLabel(/personidentifikator/i).fill(pid!)
+  await page.getByLabel(/personidentifikator/i).first().fill(pid!)
   await page.getByRole("button", { name: /autentiser/i }).click()
 
   // --- 6. Vent på redirect til /dashboard ---
