@@ -17,7 +17,13 @@ export async function GET(request: Request) {
     : `${baseUrl}/login`
 
   const response = NextResponse.redirect(target)
-  response.cookies.delete("authjs.session-token")
-  response.cookies.delete("__Secure-authjs.session-token")
+
+  // Slett Auth.js session-cookie — begge varianter (HTTP og HTTPS/__Secure-prefix).
+  // delete() inkluderer ikke Secure-flagget, så __Secure-prefixed cookies ignoreres av
+  // nettleseren. Bruk set() med maxAge: 0 og korrekte attributter for å tvinge sletting.
+  const cookieBase = { maxAge: 0, path: "/", httpOnly: true, sameSite: "lax" as const }
+  response.cookies.set("authjs.session-token", "", cookieBase)
+  response.cookies.set("__Secure-authjs.session-token", "", { ...cookieBase, secure: true })
+
   return response
 }
