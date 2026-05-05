@@ -1,24 +1,23 @@
 import { auth } from "@/lib/auth"
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
+import { NextResponse } from "next/server"
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth()
   const idToken = session?.idToken
 
-  const cookieStore = await cookies()
-  cookieStore.delete("authjs.session-token")
-  cookieStore.delete("__Secure-authjs.session-token")
+  const baseUrl = process.env.AUTH_URL ?? new URL(request.url).origin
 
-  if (idToken) {
-    const logoutUrl = new URL("https://login.test.idporten.no/logout")
-    logoutUrl.searchParams.set("id_token_hint", idToken)
-    logoutUrl.searchParams.set(
-      "post_logout_redirect_uri",
-      process.env.AUTH_URL ?? "http://localhost:3000"
-    )
-    redirect(logoutUrl.toString())
-  }
+  const target = idToken
+    ? (() => {
+        const url = new URL("https://login.test.idporten.no/logout")
+        url.searchParams.set("id_token_hint", idToken)
+        url.searchParams.set("post_logout_redirect_uri", `${baseUrl}/login`)
+        return url.toString()
+      })()
+    : `${baseUrl}/login`
 
-  redirect("/login")
+  const response = NextResponse.redirect(target)
+  response.cookies.delete("authjs.session-token")
+  response.cookies.delete("__Secure-authjs.session-token")
+  return response
 }
