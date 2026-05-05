@@ -1,11 +1,11 @@
 ---
 id: TASK-17
 title: Oppfrisk brukergrensesnitt — tilgangspakker i nedtrekkslister
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-03-11 14:24'
-updated_date: '2026-03-11 14:28'
+updated_date: '2026-05-05 10:54'
 labels:
   - ui
   - dashboard
@@ -21,11 +21,11 @@ Dashboardet bør presentere tilgangspakker og vergemål på en mer oversiktlig m
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Tilgangspakker er gruppert per kategori/tjenesteeier i kollapsbare nedtrekkslister (accordion)
-- [ ] #2 Hvert element viser en grønn badge med antall mottatte vergemål av totalt mulige (f.eks. «1 av 4»)
-- [ ] #3 Nedtrekkslisten kan åpnes/lukkes og viser detaljert innhold når utvidet
-- [ ] #4 Visuell stil følger skissen: lås-ikon til venstre, badge og pil til høyre
-- [ ] #5 Komponenten er responsiv og fungerer på mobil og desktop
+- [x] #1 Tilgangspakker er gruppert per kategori/tjenesteeier i kollapsbare nedtrekkslister (accordion)
+- [x] #2 Hvert element viser en grønn badge med antall mottatte vergemål av totalt mulige (f.eks. «1 av 4»)
+- [x] #3 Nedtrekkslisten kan åpnes/lukkes og viser detaljert innhold når utvidet
+- [x] #4 Visuell stil følger skissen: lås-ikon til venstre, badge og pil til høyre
+- [x] #5 Komponenten er responsiv og fungerer på mobil og desktop
 <!-- AC:END -->
 
 ## Implementation Plan
