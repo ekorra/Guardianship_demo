@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     ? (() => {
         const url = new URL("https://login.test.idporten.no/logout")
         url.searchParams.set("id_token_hint", idToken)
-        url.searchParams.set("post_logout_redirect_uri", `${baseUrl}/login`)
+        url.searchParams.set("post_logout_redirect_uri", baseUrl)
         return url.toString()
       })()
     : `${baseUrl}/login`
