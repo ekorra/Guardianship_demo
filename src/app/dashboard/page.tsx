@@ -8,6 +8,7 @@ import { DevPanel } from "@/components/DevPanel"
 import { VergemålDetaljer } from "@/components/VergemålDetaljer"
 import { TilgangKnapp } from "@/components/TilgangKnapp"
 import { ResourceVelger } from "@/components/ResourceVelger"
+import { DelegereSkjema } from "@/components/DelegereSkjema"
 import { redirect } from "next/navigation"
 
 const isDev = process.env.NODE_ENV === "development"
@@ -116,9 +117,13 @@ export default async function DashboardPage() {
                       <TilgangKnapp resourcePid={party.personId} />
                     )}
                   </div>
-                  {isVergePart(party) && (
-                    <VergemålDetaljer grupper={getVergemålGruppert(party, metaMap)} tittel="Vergemålsfullmakter" variant="vergemål" />
-                  )}
+                  {isVergePart(party) && (() => {
+                    const grupper = getVergemålGruppert(party, metaMap)
+                    return <>
+                      <VergemålDetaljer grupper={grupper} tittel="Vergemålsfullmakter" variant="vergemål" />
+                      <DelegereSkjema grupper={grupper} />
+                    </>
+                  })()}
                   {isInnbyggerPart(party) && (
                     <VergemålDetaljer grupper={getInnbyggerGruppert(party, metaMap)} tittel="Innbyggerfullmakter" variant="innbygger" />
                   )}
