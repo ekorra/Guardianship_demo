@@ -1,14 +1,16 @@
 import { auth } from "@/lib/auth"
-import { getPartyByPid } from "@/lib/register"
 import { delegateAccessPackages } from "@/lib/altinnEnduser"
 import { NextResponse } from "next/server"
+import type { TraceEntry } from "@/lib/trace"
+
+const isDev = process.env.NODE_ENV === "development"
 
 export async function POST(request: Request) {
   const session = await auth()
   const pid = session?.user?.pid
-  const idToken = session?.idToken
+  const accessToken = session?.accessToken
 
-  if (!pid || !idToken) {
+  if (!pid || !accessToken) {
     return NextResponse.json({ error: "Ikke innlogget" }, { status: 401 })
   }
 
@@ -27,12 +29,12 @@ export async function POST(request: Request) {
     )
   }
 
+  const traces: TraceEntry[] = []
   try {
-    const { partyUuid } = await getPartyByPid(pid)
-    await delegateAccessPackages(idToken, partyUuid, toPid, toLastName, packageIds)
-    return NextResponse.json({ ok: true })
+    await delegateAccessPackages(accessToken, pid, toPid, toLastName, packageIds, isDev ? traces : undefined)
+    return NextResponse.json({ ok: true, traces: isDev ? traces : undefined })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Ukjent feil"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: message, traces: isDev ? traces : undefined }, { status: 500 })
   }
 }

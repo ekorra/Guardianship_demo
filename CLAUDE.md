@@ -17,12 +17,18 @@ Next.js 15 demo-app (App Router) som viser vergemåls- og innbyggerfullmakter fo
 - `src/lib/altinn.ts` — `getAuthorizedParties`, `isVergePart`, `isInnbyggerPart`, `getVergemålGruppert`, `getInnbyggerGruppert`
 - `src/lib/accesspackages.ts` — Henter og cacher pakke-metadata fra Altinn AM eksport-API (1t TTL)
 - `src/lib/pdp.ts` — PDP-sjekk mot Altinn Authorization API (XACML JSON Profile)
+- `src/lib/altinnEnduser.ts` — Enduser-token-innveksling og delegering: `delegateAccessPackages(idToken, pid, toPid, toLastName, packageIds[])`
+- `src/lib/register.ts` — Ubrukt; opprinnelig register-oppslag via Maskinporten (beholdt for referanse)
+
+### API-ruter
+- `src/app/api/delegate/route.ts` — POST-rute som leser `pid`+`idToken` fra sesjon og delegerer tilgangspakker via `altinnEnduser.ts`
 
 ### UI-komponenter
 - `src/app/dashboard/page.tsx` — Dashboard (Server Component)
 - `src/components/VergemålDetaljer.tsx` — Accordion-liste over tilgangspakker (`variant="vergemål"|"innbygger"`)
 - `src/components/TilgangKnapp.tsx` — Knapp for å sjekke PDP-tilgang; lytter på `resource-change`-event
 - `src/components/ResourceVelger.tsx` — Felles ressursvelger (nedtrekksliste + legg-til-skjema med action-felt)
+- `src/components/DelegereSkjema.tsx` — Multi-stegs skjema (form → velg → bekreft → suksess/feil) for å delegere fullmakt; viser kun `mottatt: true`-pakker; POSTer til `/api/delegate`
 - `src/components/DevPanel.tsx` — Dev-panel for å vise API-traces
 
 ### Konfigurasjon og CI/CD
@@ -46,7 +52,9 @@ Next.js 15 demo-app (App Router) som viser vergemåls- og innbyggerfullmakter fo
 ### Auth.js v5 logout
 - `signOut({ redirectTo: externalUrl })` støtter IKKE eksterne URLer
 - Løsning: Dedikert `/api/logout` GET-rute
+- **`redirect()` fra `next/navigation` dropper Set-Cookie-headere** i Route Handlers — bruk `NextResponse.redirect()` og sett cookies direkte på response-objektet
 - På HTTPS (Vercel) heter cookie `__Secure-authjs.session-token` — begge varianter må slettes ved logout
+- **`__Secure-` cookies ignoreres av Chrome ved `cookies.delete()`** fordi Secure-flagget ikke settes. Slett med `response.cookies.set("__Secure-authjs.session-token", "", { maxAge: 0, secure: true, ... })` i stedet
 
 ### Maskinporten
 - JWT assertion må inkludere `kid` i protected header
@@ -59,6 +67,16 @@ Next.js 15 demo-app (App Router) som viser vergemåls- og innbyggerfullmakter fo
 - Action value: `"read"`, DataType: `"http://www.w3.org/2001/XMLSchema#string"`
 - Maskinporten-token må veksles inn mot Altinn-token før bruk: `GET /authentication/api/v1/exchange/maskinporten`
 - Subscription key sendes som `Ocp-Apim-Subscription-Key`-header
+
+### Altinn enduser (brukerstyrt delegering)
+- ID-porten access_token (ikke id_token) veksles til Altinn enduser-token: `GET /authentication/api/v1/exchange/id-porten`
+- **`altinn:register.read` er ikke et gyldig Maskinporten-scope** — ikke forsøk å bruke dette
+- Krever to scopes på ID-porten-klienten (sluttbruker samtykker ved innlogging): `altinn:accessmanagement/enduser:connections:toothers.write` og `altinn:accessmanagement/authorizedparties`
+- **Separat ID-porten-klient nødvendig** for Altinn-scopes — disse kan ikke legges til en eksisterende klient uten at den er konfigurert for det
+- Innlogget brukers `partyUuid` hentes fra `GET /enduser/authorizedparties`; responsen er `{ data: [...] }` (ikke direkte array); filtrer på `personId === pid`
+- Kobling opprettes med `POST /enduser/connections?party={partyUuid}` med body `{ personIdentifier, lastName }`; respons inneholder `{ id, toId, fromId, roleId }`
+- Tilgangspakker delegeres med `POST /enduser/connections/accesspackages?party={fromPartyUuid}&connection={connectionId}&to={toId}&package={encodeURIComponent(packageId)}` — pakke-ID og mottaker er **query-parametere**, ikke body
+- `session.accessToken` (ID-porten access_token) brukes til exchange — `session.idToken` beholdes separat for logout (`id_token_hint`)
 
 ### E2E-tester
 - ID-portens TestID-selector-side er ustabil — `click()` er wrapped i `try/catch` med 5s timeout

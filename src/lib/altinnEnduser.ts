@@ -1,20 +1,82 @@
+import type { TraceEntry } from "./trace"
+
 const EXCHANGE_URL =
   "https://platform.tt02.altinn.no/authentication/api/v1/exchange/id-porten"
 const BASE_URL =
   "https://platform.tt02.altinn.no/accessmanagement/api/v1/enduser"
 
-async function exchangeIdPortenToken(idToken: string): Promise<string> {
+async function exchangeIdPortenToken(accessToken: string, traces?: TraceEntry[]): Promise<string> {
+  const t0 = Date.now()
   const response = await fetch(EXCHANGE_URL, {
-    headers: { Authorization: `Bearer ${idToken}` },
+    headers: { Authorization: `Bearer ${accessToken}` },
   })
+  const durationMs = Date.now() - t0
+
   if (!response.ok) {
-    throw new Error(`ID-porten token-innveksling feilet: ${response.status} ${await response.text()}`)
+    const errorBody = await response.text()
+    traces?.push({
+      name: "ID-porten token-innveksling",
+      request: { method: "GET", url: EXCHANGE_URL },
+      response: { status: response.status, body: errorBody },
+      durationMs,
+    })
+    throw new Error(`ID-porten token-innveksling feilet: ${response.status} ${errorBody}`)
   }
-  return response.text()
+
+  const altinnToken = await response.text()
+  traces?.push({
+    name: "ID-porten token-innveksling",
+    request: { method: "GET", url: EXCHANGE_URL },
+    response: { status: response.status, body: "[TOKEN REDACTED]" },
+    durationMs,
+  })
+  return altinnToken
+}
+
+async function getOwnPartyUuid(altinnToken: string, pid: string, traces?: TraceEntry[]): Promise<string> {
+  const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
+  const url = `${BASE_URL}/authorizedparties`
+  const t0 = Date.now()
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${altinnToken}`,
+      ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
+    },
+  })
+  const durationMs = Date.now() - t0
+
+  if (!response.ok) {
+    const errorBody = await response.text()
+    traces?.push({
+      name: "Altinn authorizedparties",
+      request: { method: "GET", url },
+      response: { status: response.status, body: errorBody },
+      durationMs,
+    })
+    throw new Error(`Henting av egne parter feilet: ${response.status} ${errorBody}`)
+  }
+
+  const raw = await response.json()
+  const parties: Array<{ partyUuid?: string; personIdentifier?: string; personId?: string }> = Array.isArray(raw)
+    ? raw
+    : (raw as { data?: unknown[] }).data ?? []
+  const own = parties.find((p) => (p.personIdentifier ?? p.personId) === pid)
+  traces?.push({
+    name: "Altinn authorizedparties",
+    request: { method: "GET", url },
+    response: { status: response.status, body: raw },
+    durationMs,
+  })
+
+  if (!own?.partyUuid) {
+    throw new Error(`Fant ikke partyUuid for innlogget bruker (PID: ${pid})`)
+  }
+  return own.partyUuid
 }
 
 export interface Connection {
   id: string
+  toId: string
 }
 
 async function createConnection(
@@ -22,9 +84,12 @@ async function createConnection(
   partyUuid: string,
   toPid: string,
   toLastName: string,
+  traces?: TraceEntry[],
 ): Promise<Connection> {
   const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
   const url = `${BASE_URL}/connections?party=${partyUuid}`
+  const body = { personIdentifier: toPid, lastName: toLastName }
+  const t0 = Date.now()
 
   const response = await fetch(url, {
     method: "POST",
@@ -33,24 +98,45 @@ async function createConnection(
       "Content-Type": "application/json",
       ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
     },
-    body: JSON.stringify({ personIdentifier: toPid, lastName: toLastName }),
+    body: JSON.stringify(body),
   })
+  const durationMs = Date.now() - t0
 
   if (!response.ok) {
-    throw new Error(`Oppretting av kobling feilet: ${response.status} ${await response.text()}`)
+    const errorBody = await response.text()
+    traces?.push({
+      name: "Altinn opprett kobling",
+      request: { method: "POST", url, body },
+      response: { status: response.status, body: errorBody },
+      durationMs,
+    })
+    throw new Error(`Oppretting av kobling feilet: ${response.status} ${errorBody}`)
   }
 
-  return response.json() as Promise<Connection>
+  const data = (await response.json()) as Connection
+  traces?.push({
+    name: "Altinn opprett kobling",
+    request: { method: "POST", url, body },
+    response: { status: response.status, body: data },
+    durationMs,
+  })
+  return data
 }
 
 async function delegatePackage(
   altinnToken: string,
   partyUuid: string,
   connectionId: string,
+  toPartyUuid: string,
   packageId: string,
+  toPid: string,
+  toLastName: string,
+  traces?: TraceEntry[],
 ): Promise<void> {
   const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
-  const url = `${BASE_URL}/connections/accesspackages?party=${partyUuid}&connection=${connectionId}`
+  const url = `${BASE_URL}/connections/accesspackages?party=${partyUuid}&connection=${connectionId}&to=${toPartyUuid}&package=${encodeURIComponent(packageId)}`
+  const body = { personIdentifier: toPid, lastName: toLastName }
+  const t0 = Date.now()
 
   const response = await fetch(url, {
     method: "POST",
@@ -59,26 +145,41 @@ async function delegatePackage(
       "Content-Type": "application/json",
       ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
     },
-    body: JSON.stringify({ packageId }),
+    body: JSON.stringify(body),
   })
+  const durationMs = Date.now() - t0
 
   if (!response.ok) {
-    throw new Error(
-      `Delegering av pakke ${packageId} feilet: ${response.status} ${await response.text()}`,
-    )
+    const errorBody = await response.text()
+    traces?.push({
+      name: `Altinn deleger pakke (${packageId})`,
+      request: { method: "POST", url, body },
+      response: { status: response.status, body: errorBody },
+      durationMs,
+    })
+    throw new Error(`Delegering av pakke ${packageId} feilet: ${response.status} ${errorBody}`)
   }
+
+  traces?.push({
+    name: `Altinn deleger pakke (${packageId})`,
+    request: { method: "POST", url, body },
+    response: { status: response.status, body: "OK" },
+    durationMs,
+  })
 }
 
 export async function delegateAccessPackages(
-  idToken: string,
-  fromPartyUuid: string,
+  accessToken: string,
+  pid: string,
   toPid: string,
   toLastName: string,
   packageIds: string[],
+  traces?: TraceEntry[],
 ): Promise<void> {
-  const altinnToken = await exchangeIdPortenToken(idToken)
-  const connection = await createConnection(altinnToken, fromPartyUuid, toPid, toLastName)
+  const altinnToken = await exchangeIdPortenToken(accessToken, traces)
+  const fromPartyUuid = await getOwnPartyUuid(altinnToken, pid, traces)
+  const connection = await createConnection(altinnToken, fromPartyUuid, toPid, toLastName, traces)
   await Promise.all(
-    packageIds.map((id) => delegatePackage(altinnToken, fromPartyUuid, connection.id, id)),
+    packageIds.map((id) => delegatePackage(altinnToken, fromPartyUuid, connection.id, connection.toId, id, toPid, toLastName, traces)),
   )
 }

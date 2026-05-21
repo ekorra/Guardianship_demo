@@ -81,7 +81,7 @@ export const config: NextAuthConfig = {
         : {}),
       authorization: {
         params: {
-          scope: "openid profile",
+          scope: "openid profile altinn:accessmanagement/enduser:connections:toothers.write altinn:accessmanagement/authorizedparties",
           ui_locales: "nb",
           acr_values: "idporten-loa-substantial",
         },
@@ -108,6 +108,9 @@ export const config: NextAuthConfig = {
       if (account?.id_token) {
         token.idToken = account.id_token
       }
+      if (account?.access_token) {
+        token.accessToken = account.access_token
+      }
       if (profile?.pid) token.pid = profile.pid as string
       if (profile?.given_name) token.given_name = profile.given_name as string
       if (profile?.family_name) token.family_name = profile.family_name as string
@@ -118,6 +121,7 @@ export const config: NextAuthConfig = {
       if (token.given_name) session.user.given_name = token.given_name as string
       if (token.family_name) session.user.family_name = token.family_name as string
       if (token.idToken) session.idToken = token.idToken as string
+      if (token.accessToken) session.accessToken = token.accessToken as string
       return session
     },
   },

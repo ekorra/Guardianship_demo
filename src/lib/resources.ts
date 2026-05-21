@@ -12,6 +12,15 @@ export const PRECONFIGURED_RESOURCES: Resource[] = [
   { id: "brg-firmaopplysninger", label: "Firmaopplysninger (Brønnøysund)" },
 ]
 
+export interface DelegerbaPakke {
+  id: string
+  label: string
+}
+
+export const DELEGERBARE_PAKKER: DelegerbaPakke[] = [
+  { id: "urn:altinn:accesspackage:innbygger-stotte-tilskudd", label: "Støtte og tilskudd" },
+]
+
 export const LOCALSTORAGE_CUSTOM_KEY = "tilgang_custom_resources"
 export const LOCALSTORAGE_SELECTED_KEY = "tilgang_selected_resource_id"
 export const RESOURCE_CHANGE_EVENT = "resource-change"

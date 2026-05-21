@@ -8,5 +8,6 @@ declare module "next-auth" {
       family_name?: string
     } & DefaultSession["user"]
     idToken?: string
+    accessToken?: string
   }
 }

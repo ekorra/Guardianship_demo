@@ -76,6 +76,9 @@ export default async function DashboardPage() {
             </div>
             {pid && <TilgangKnapp resourcePid={pid} />}
           </div>
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <DelegereSkjema />
+          </div>
         </div>
 
         <ResourceVelger />
@@ -117,13 +120,9 @@ export default async function DashboardPage() {
                       <TilgangKnapp resourcePid={party.personId} />
                     )}
                   </div>
-                  {isVergePart(party) && (() => {
-                    const grupper = getVergemålGruppert(party, metaMap)
-                    return <>
-                      <VergemålDetaljer grupper={grupper} tittel="Vergemålsfullmakter" variant="vergemål" />
-                      <DelegereSkjema grupper={grupper} />
-                    </>
-                  })()}
+                  {isVergePart(party) && (
+                    <VergemålDetaljer grupper={getVergemålGruppert(party, metaMap)} tittel="Vergemålsfullmakter" variant="vergemål" />
+                  )}
                   {isInnbyggerPart(party) && (
                     <VergemålDetaljer grupper={getInnbyggerGruppert(party, metaMap)} tittel="Innbyggerfullmakter" variant="innbygger" />
                   )}

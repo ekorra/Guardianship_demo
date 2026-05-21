@@ -1,15 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import type { PakkeGruppe } from "@/lib/altinn"
+import type { TraceEntry } from "@/lib/trace"
+import { DELEGERBARE_PAKKER } from "@/lib/resources"
 
 type Step = "form" | "velg" | "bekreft" | "suksess" | "feil"
 
-interface Props {
-  grupper: PakkeGruppe[]
-}
-
-export function DelegereSkjema({ grupper }: Props) {
+export function DelegereSkjema() {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<Step>("form")
   const [toPid, setToPid] = useState("")
@@ -18,7 +15,7 @@ export function DelegereSkjema({ grupper }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const mottattPakker = grupper.flatMap((g) => g.pakker.filter((p) => p.mottatt))
+  const mottattPakker = DELEGERBARE_PAKKER
 
   function reset() {
     setStep("form")
@@ -50,7 +47,10 @@ export function DelegereSkjema({ grupper }: Props) {
           packageIds: [...selected],
         }),
       })
-      const data = (await res.json()) as { ok?: boolean; error?: string }
+      const data = (await res.json()) as { ok?: boolean; error?: string; traces?: TraceEntry[] }
+      if (data.traces?.length) {
+        window.dispatchEvent(new CustomEvent("dev-trace", { detail: data.traces }))
+      }
       if (!res.ok || !data.ok) {
         setError(data.error ?? "Noe gikk galt")
         setStep("feil")
@@ -124,15 +124,15 @@ export function DelegereSkjema({ grupper }: Props) {
           ) : (
             <ul className="space-y-1 max-h-48 overflow-y-auto">
               {mottattPakker.map((p) => (
-                <li key={p.identifier}>
+                <li key={p.id}>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={selected.has(p.identifier)}
-                      onChange={() => togglePackage(p.identifier)}
+                      checked={selected.has(p.id)}
+                      onChange={() => togglePackage(p.id)}
                       className="rounded"
                     />
-                    <span className="text-gray-700">{p.tittelNb}</span>
+                    <span className="text-gray-700">{p.label}</span>
                   </label>
                 </li>
               ))}
@@ -161,8 +161,8 @@ export function DelegereSkjema({ grupper }: Props) {
           </p>
           <ul className="text-xs text-gray-600 list-disc list-inside mb-3">
             {[...selected].map((id) => {
-              const pakke = mottattPakker.find((p) => p.identifier === id)
-              return <li key={id}>{pakke?.tittelNb ?? id}</li>
+              const pakke = mottattPakker.find((p) => p.id === id)
+              return <li key={id}>{pakke?.label ?? id}</li>
             })}
           </ul>
           <div className="flex gap-2">
