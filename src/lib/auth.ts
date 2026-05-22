@@ -42,6 +42,53 @@ async function fixClientAssertionAud(jwt: string, signingKey: CryptoKey): Promis
   return `${signingInput}.${Buffer.from(rawSignature).toString("base64url")}`
 }
 
+const TOKEN_ENDPOINT = "https://test.idporten.no/token"
+const REFRESH_BUFFER_SECONDS = 30
+
+async function createClientAssertion(): Promise<string> {
+  const now = Math.floor(Date.now() / 1000)
+  const header = { alg: "RS256", kid: idportenPrivateKey!.kid, typ: "JWT" }
+  const payload = {
+    iss: process.env.IDPORTEN_CLIENT_ID,
+    sub: process.env.IDPORTEN_CLIENT_ID,
+    aud: "https://test.idporten.no",
+    iat: now,
+    exp: now + 60,
+    jti: crypto.randomUUID(),
+  }
+  const encodedHeader = Buffer.from(JSON.stringify(header)).toString("base64url")
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url")
+  const signingInput = `${encodedHeader}.${encodedPayload}`
+  const rawSignature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", idportenPrivateKey!.key, Buffer.from(signingInput))
+  return `${signingInput}.${Buffer.from(rawSignature).toString("base64url")}`
+}
+
+async function refreshIdPortenToken(
+  refreshToken: string,
+): Promise<{ access_token: string; refresh_token?: string; expires_in: number } | null> {
+  const params = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+    client_id: process.env.IDPORTEN_CLIENT_ID!,
+  })
+  if (idportenPrivateKey) {
+    params.set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+    params.set("client_assertion", await createClientAssertion())
+  } else if (process.env.IDPORTEN_CLIENT_SECRET) {
+    params.set("client_secret", process.env.IDPORTEN_CLIENT_SECRET)
+  }
+  const res = await fetch(TOKEN_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params,
+  })
+  if (!res.ok) {
+    console.error("Token refresh feilet:", res.status, await res.text())
+    return null
+  }
+  return res.json() as Promise<{ access_token: string; refresh_token?: string; expires_in: number }>
+}
+
 export const config: NextAuthConfig = {
   providers: [
     {
@@ -104,16 +151,28 @@ export const config: NextAuthConfig = {
     },
   ],
   callbacks: {
-    jwt({ token, account, profile }) {
-      if (account?.id_token) {
-        token.idToken = account.id_token
-      }
-      if (account?.access_token) {
-        token.accessToken = account.access_token
-      }
+    async jwt({ token, account, profile }) {
       if (profile?.pid) token.pid = profile.pid as string
       if (profile?.given_name) token.given_name = profile.given_name as string
       if (profile?.family_name) token.family_name = profile.family_name as string
+      if (account) {
+        token.idToken = account.id_token
+        token.accessToken = account.access_token
+        token.refreshToken = account.refresh_token
+        token.expiresAt = account.expires_at
+        return token
+      }
+      const expiresAt = token.expiresAt as number | undefined
+      if (!expiresAt || Date.now() / 1000 < expiresAt - REFRESH_BUFFER_SECONDS) {
+        return token
+      }
+      const refreshToken = token.refreshToken as string | undefined
+      if (!refreshToken) return token
+      const refreshed = await refreshIdPortenToken(refreshToken)
+      if (!refreshed) return token
+      token.accessToken = refreshed.access_token
+      token.refreshToken = refreshed.refresh_token ?? refreshToken
+      token.expiresAt = Math.floor(Date.now() / 1000) + refreshed.expires_in
       return token
     },
     session({ session, token }) {

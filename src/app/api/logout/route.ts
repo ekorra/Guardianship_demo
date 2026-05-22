@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const session = await auth()
   const idToken = session?.idToken
 
@@ -18,12 +18,17 @@ export async function GET(request: Request) {
 
   const response = NextResponse.redirect(target)
 
-  // Slett Auth.js session-cookie — begge varianter (HTTP og HTTPS/__Secure-prefix).
-  // delete() inkluderer ikke Secure-flagget, så __Secure-prefixed cookies ignoreres av
-  // nettleseren. Bruk set() med maxAge: 0 og korrekte attributter for å tvinge sletting.
+  // Slett alle Auth.js session-cookies — inkludert chunked varianter (.0, .1, ...)
+  // som oppstår når JWT-en er for stor for én cookie.
+  // delete() setter ikke Secure-flagget, så __Secure-prefixed cookies må slettes med set().
   const cookieBase = { maxAge: 0, path: "/", httpOnly: true, sameSite: "lax" as const }
-  response.cookies.set("authjs.session-token", "", cookieBase)
-  response.cookies.set("__Secure-authjs.session-token", "", { ...cookieBase, secure: true })
+  const sessionCookies = request.cookies.getAll().filter(
+    (c) => c.name.startsWith("authjs.session-token") || c.name.startsWith("__Secure-authjs.session-token"),
+  )
+  for (const { name } of sessionCookies) {
+    const isSecure = name.startsWith("__Secure-")
+    response.cookies.set(name, "", isSecure ? { ...cookieBase, secure: true } : cookieBase)
+  }
 
   return response
 }

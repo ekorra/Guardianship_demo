@@ -215,7 +215,7 @@ async function delegatePackage(
 }
 
 export interface ReceivedConnection {
-  party: { id: string; name: string; type: string }
+  party: { id: string; name: string; type: string; personIdentifier?: string }
   roles: Array<{ id: string; code: string; urn: string }>
   packages: Array<{ id: string; urn: string }>
   resource: unknown[]
@@ -323,6 +323,47 @@ export async function getGivenConnections(
     durationMs,
   })
   return connections
+}
+
+export async function getAllConnections(
+  accessToken: string,
+  pid: string,
+  traces?: TraceEntry[],
+): Promise<{ received: ReceivedConnection[]; given: ReceivedConnection[] }> {
+  const altinnToken = await exchangeIdPortenToken(accessToken, traces)
+  const partyUuid = await getOwnPartyUuid(altinnToken, pid, traces)
+  const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
+
+  async function fetchConnections(direction: "to" | "from"): Promise<ReceivedConnection[]> {
+    const traceName = direction === "to" ? "Altinn mottatte koblinger" : "Altinn avgitte koblinger"
+    const url = `${BASE_URL}/connections?party=${partyUuid}&${direction}=${partyUuid}`
+    const t0 = Date.now()
+    let response: Response
+    try {
+      response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${altinnToken}`,
+          ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
+        },
+      })
+    } catch (err) {
+      traces?.push({ name: traceName, request: { method: "GET", url }, response: { status: 0, body: String(err) }, durationMs: Date.now() - t0 })
+      throw err
+    }
+    const durationMs = Date.now() - t0
+    if (!response.ok) {
+      const errorBody = await response.text()
+      traces?.push({ name: traceName, request: { method: "GET", url }, response: { status: response.status, body: errorBody }, durationMs })
+      throw new Error(`${traceName} feilet: ${response.status} ${errorBody}`)
+    }
+    const raw = await response.json()
+    const connections: ReceivedConnection[] = Array.isArray(raw) ? raw : ((raw as { data?: ReceivedConnection[] }).data ?? [])
+    traces?.push({ name: traceName, request: { method: "GET", url }, response: { status: response.status, body: raw }, durationMs })
+    return connections
+  }
+
+  const [received, given] = await Promise.all([fetchConnections("to"), fetchConnections("from")])
+  return { received, given }
 }
 
 export async function delegateAccessPackages(

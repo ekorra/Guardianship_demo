@@ -1,10 +1,11 @@
 ---
 id: TASK-27
 title: 'Sluttbrukersystem: deleger fullmakt'
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-05-22 07:51'
-updated_date: '2026-05-22 09:14'
+updated_date: '2026-05-22 13:52'
 labels:
   - backend
   - frontend
@@ -32,3 +33,12 @@ Implementer delegering av fullmakt for sluttbrukersystem-flyt (flyt 3). Gjenbruk
 - [ ] #6 E2E-tester er oppdatert og grønne
 - [ ] #7 Ingen regresjoner for flyt 1, 2 og TASK-26
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. AC #1 allerede oppfylt — scope toothers.write er i auth.ts
+2. Legg til DelegereSkjema i sluttbrukersystem/page.tsx som eget panel
+3. Verifiser at /api/delegate fungerer for flyt 3 (bruker session.accessToken — samme token)
+4. Kjør tester
+<!-- SECTION:PLAN:END -->

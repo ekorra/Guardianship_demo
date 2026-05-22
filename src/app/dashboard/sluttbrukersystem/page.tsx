@@ -1,11 +1,12 @@
 import { auth } from "@/lib/auth"
-import { getReceivedConnections, getGivenConnections } from "@/lib/altinnEnduser"
+import { getAllConnections } from "@/lib/altinnEnduser"
 import type { ReceivedConnection } from "@/lib/altinnEnduser"
 import { getRoleMetaMap } from "@/lib/roles"
 import type { RoleMeta } from "@/lib/roles"
 import type { TraceEntry } from "@/lib/trace"
 import { DevPanel } from "@/components/DevPanel"
 import { RollerGruppe } from "@/components/RollerGruppe"
+import { DelegereSkjema } from "@/components/DelegereSkjema"
 import { redirect } from "next/navigation"
 
 const isDev = process.env.NODE_ENV === "development"
@@ -34,7 +35,7 @@ function ConnectionCard({
         </div>
         <div>
           <p className="text-sm font-semibold text-gray-900">{conn.party.name}</p>
-          <p className="text-xs text-gray-400 font-mono mt-0.5">{conn.party.id}</p>
+          <p className="text-xs text-gray-400 font-mono mt-0.5">{conn.party.personIdentifier ?? conn.party.id}</p>
         </div>
       </div>
 
@@ -71,23 +72,18 @@ export default async function SluttbrukersystemPage() {
   let givenError: string | null = null
 
   if (pid && accessToken) {
-    const [receivedResult, givenResult] = await Promise.allSettled([
-      getReceivedConnections(accessToken, pid, isDev ? traces : undefined),
-      getGivenConnections(accessToken, pid, isDev ? traces : undefined),
-    ])
-    if (receivedResult.status === "fulfilled") {
-      receivedConnections = receivedResult.value
-    } else {
-      receivedError = receivedResult.reason instanceof Error ? receivedResult.reason.message : "Ukjent feil"
-    }
-    if (givenResult.status === "fulfilled") {
-      givenConnections = givenResult.value
-    } else {
-      givenError = givenResult.reason instanceof Error ? givenResult.reason.message : "Ukjent feil"
-    }
-    const allRoleIds = [...receivedConnections, ...givenConnections].flatMap((c) => (c.roles ?? []).map((r) => r.id))
-    if (allRoleIds.length > 0) {
-      roleMetaMap = await getRoleMetaMap(allRoleIds, isDev ? traces : undefined)
+    try {
+      const { received, given } = await getAllConnections(accessToken, pid, isDev ? traces : undefined)
+      receivedConnections = received
+      givenConnections = given
+      const allRoleIds = [...received, ...given].flatMap((c) => (c.roles ?? []).map((r) => r.id))
+      if (allRoleIds.length > 0) {
+        roleMetaMap = await getRoleMetaMap(allRoleIds, isDev ? traces : undefined)
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Ukjent feil"
+      receivedError = msg
+      givenError = msg
     }
   }
 
@@ -122,6 +118,11 @@ export default async function SluttbrukersystemPage() {
                 <p className="text-sm text-gray-400 font-mono mt-0.5">{pid ?? "—"}</p>
               </div>
             </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Deleger fullmakt</h2>
+            <DelegereSkjema />
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
