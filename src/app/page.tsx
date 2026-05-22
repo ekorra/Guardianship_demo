@@ -39,7 +39,7 @@ export default async function Home() {
               <span className="text-lg font-bold text-blue-700">2</span>
             </div>
             <h2 className="text-sm font-semibold text-gray-800 mb-2">
-              ID-porten + Maskinporten
+              Innlogging til tjenesteeier
             </h2>
             <p className="text-xs text-gray-500 mb-6 flex-1">
               Sluttbruker logger inn via ID-porten. Tjenesteeier henter fullmaktsdata via Maskinporten.
