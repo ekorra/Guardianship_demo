@@ -5,11 +5,11 @@ const pid = process.env.STANDARD_BRUKER ?? process.env.TEST_PID
 test.skip(!pid, "STANDARD_BRUKER eller TEST_PID må være satt i miljø")
 
 test("Innlogging og utlogging via ID-porten TestID", async ({ page }) => {
-  // --- 1. Gå til login-siden ---
-  await page.goto("/login")
-  await expect(page).toHaveURL("/login")
+  // --- 1. Gå til landingssiden ---
+  await page.goto("/")
+  await expect(page).toHaveURL("/")
 
-  // --- 2. Klikk "Logg inn med ID-porten" ---
+  // --- 2. Klikk "Logg inn med ID-porten" (alternativ 2) ---
   await page.getByRole("button", { name: /logg inn med id-porten/i }).click()
 
   // --- 3. Vent på ID-portens selector-side ---
@@ -40,9 +40,8 @@ test("Innlogging og utlogging via ID-porten TestID", async ({ page }) => {
   const loggUtLink = page.getByRole("link", { name: /logg ut/i })
   await expect(loggUtLink).toBeVisible()
 
-  // --- 9. Logg ut og verifiser redirect til /login ---
+  // --- 9. Logg ut og verifiser redirect til / eller /login ---
   await loggUtLink.click()
-  await page.waitForURL("**/login", { timeout: 15_000 })
-  await expect(page).toHaveURL(/\/login$/)
+  await page.waitForURL(/\/(login)?$/, { timeout: 15_000 })
   await expect(page).not.toHaveURL(/error/)
 })

@@ -5,7 +5,7 @@ const pid = process.env.STANDARD_BRUKER ?? process.env.TEST_PID
 test.skip(!pid, "STANDARD_BRUKER eller TEST_PID må være satt i miljø")
 
 async function loggInn(page: Parameters<Parameters<typeof test>[1]>[0]) {
-  await page.goto("/login")
+  await page.goto("/")
   await page.getByRole("button", { name: /logg inn med id-porten/i }).click()
   await page.waitForURL(/test\.idporten\.no/, { timeout: 15_000 })
   try {
