@@ -81,7 +81,7 @@ export const config: NextAuthConfig = {
         : {}),
       authorization: {
         params: {
-          scope: "openid profile altinn:accessmanagement/enduser:connections:toothers.write altinn:accessmanagement/authorizedparties",
+          scope: "openid profile altinn:accessmanagement/enduser:connections:toothers.write altinn:accessmanagement/enduser:connections:fromothers.read altinn:accessmanagement/authorizedparties",
           ui_locales: "nb",
           acr_values: "idporten-loa-substantial",
         },

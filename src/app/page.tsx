@@ -59,20 +59,30 @@ export default async function Home() {
             </form>
           </div>
 
-          {/* Alternativ 3 — disabled */}
-          <div className="relative bg-white rounded-lg shadow-sm border border-gray-200 p-6 opacity-60 cursor-not-allowed select-none">
-            <span className="absolute top-3 right-3 text-xs font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-              Kommer snart
-            </span>
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-              <span className="text-lg font-bold text-gray-400">3</span>
+          {/* Alternativ 3 — aktivt */}
+          <div className="bg-white rounded-lg shadow-sm border-2 border-blue-500 p-6 flex flex-col">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+              <span className="text-lg font-bold text-blue-700">3</span>
             </div>
-            <h2 className="text-sm font-semibold text-gray-700 mb-2">
+            <h2 className="text-sm font-semibold text-gray-800 mb-2">
               Sluttbrukersystem
             </h2>
-            <p className="text-xs text-gray-400">
-              Et tredjeparts system delegerer fullmakter på vegne av bruker uten direkte brukerinteraksjon.
+            <p className="text-xs text-gray-500 mb-6 flex-1">
+              Bruker logger inn og ser fullmakter mottatt via Altinn-koblinger. Ingen tjenesteeier-API.
             </p>
+            <form
+              action={async () => {
+                "use server"
+                await signIn("idporten", { redirectTo: "/dashboard/sluttbrukersystem" })
+              }}
+            >
+              <button
+                type="submit"
+                className="w-full bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors"
+              >
+                Logg inn med ID-porten
+              </button>
+            </form>
           </div>
         </div>
       </div>

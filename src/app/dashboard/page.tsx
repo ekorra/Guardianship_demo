@@ -8,7 +8,6 @@ import { DevPanel } from "@/components/DevPanel"
 import { VergemålDetaljer } from "@/components/VergemålDetaljer"
 import { TilgangKnapp } from "@/components/TilgangKnapp"
 import { ResourceVelger } from "@/components/ResourceVelger"
-import { DelegereSkjema } from "@/components/DelegereSkjema"
 import { redirect } from "next/navigation"
 
 const isDev = process.env.NODE_ENV === "development"
@@ -75,9 +74,6 @@ export default async function DashboardPage() {
               <p className="text-sm text-gray-400 font-mono mt-0.5">{pid ?? "—"}</p>
             </div>
             {pid && <TilgangKnapp resourcePid={pid} />}
-          </div>
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <DelegereSkjema />
           </div>
         </div>
 

@@ -214,6 +214,65 @@ async function delegatePackage(
   })
 }
 
+export interface ReceivedConnection {
+  party: { id: string; name: string; type: string }
+  roles: Array<{ id: string; code: string }>
+  packages: Array<{ id: string; urn: string }>
+  resource: unknown[]
+}
+
+export async function getReceivedConnections(
+  accessToken: string,
+  pid: string,
+  traces?: TraceEntry[],
+): Promise<ReceivedConnection[]> {
+  const altinnToken = await exchangeIdPortenToken(accessToken, traces)
+  const partyUuid = await getOwnPartyUuid(altinnToken, pid, traces)
+  const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
+  const url = `${BASE_URL}/connections?party=${partyUuid}&to=${partyUuid}`
+  const t0 = Date.now()
+  let response: Response
+  try {
+    response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${altinnToken}`,
+        ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
+      },
+    })
+  } catch (err) {
+    const durationMs = Date.now() - t0
+    traces?.push({
+      name: "Altinn mottatte koblinger",
+      request: { method: "GET", url },
+      response: { status: 0, body: String(err) },
+      durationMs,
+    })
+    throw err
+  }
+  const durationMs = Date.now() - t0
+
+  if (!response.ok) {
+    const errorBody = await response.text()
+    traces?.push({
+      name: "Altinn mottatte koblinger",
+      request: { method: "GET", url },
+      response: { status: response.status, body: errorBody },
+      durationMs,
+    })
+    throw new Error(`Henting av mottatte koblinger feilet: ${response.status} ${errorBody}`)
+  }
+
+  const raw = await response.json()
+  const data: ReceivedConnection[] = Array.isArray(raw) ? raw : ((raw as { data?: ReceivedConnection[] }).data ?? [])
+  traces?.push({
+    name: "Altinn mottatte koblinger",
+    request: { method: "GET", url },
+    response: { status: response.status, body: raw },
+    durationMs,
+  })
+  return data
+}
+
 export async function delegateAccessPackages(
   accessToken: string,
   pid: string,
