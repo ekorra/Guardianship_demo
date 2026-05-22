@@ -38,6 +38,46 @@ Next.js 15 demo-app (App Router) som viser vergemåls- og innbyggerfullmakter fo
 ## Arkitektur: delt ressursvalg uten React Context
 `ResourceVelger` dispatches `new CustomEvent("resource-change", { detail: { id, action } })` og skriver til `localStorage`. `TilgangKnapp` lytter via `useEffect`. Dette unngår å wrappe Server Components i en klient-context-provider.
 
+## Arkitektur: DevPanel trace-mønster
+
+Alle kall til eksterne API MÅ støtte trace-innsamling slik at de vises i DevPanel under utvikling.
+
+**Server-side (lib-funksjoner):**
+```ts
+async function kallEksterntApi(arg: string, traces?: TraceEntry[]): Promise<Result> {
+  const t0 = Date.now()
+  const response = await fetch(url, { ... })
+  const durationMs = Date.now() - t0
+  if (!response.ok) {
+    const body = await response.text()
+    traces?.push({ name: "Navn på kall", request: { method, url }, response: { status: response.status, body }, durationMs })
+    throw new Error(`Feilmelding: ${response.status}`)
+  }
+  const data = await response.json()
+  traces?.push({ name: "Navn på kall", request: { method, url }, response: { status: response.status, body: data }, durationMs })
+  return data
+}
+```
+
+**API-rute (route.ts):**
+```ts
+const isDev = process.env.NODE_ENV === "development"
+const traces: TraceEntry[] = []
+// kall lib-funksjon med traces-array kun i dev
+await kallEksterntApi(arg, isDev ? traces : undefined)
+return NextResponse.json({ ..., traces: isDev ? traces : undefined })
+```
+
+**Klient-komponent:**
+```ts
+const data = await res.json()
+if (data.traces?.length) {
+  window.dispatchEvent(new CustomEvent("dev-trace", { detail: data.traces }))
+}
+```
+
+`DevPanel` lytter på `dev-trace`-eventet og viser alle entries. Mønsteret brukes i `pdp.ts`, `maskinporten.ts`, `altinn.ts`, `altinnEnduser.ts` og tilhørende ruter/komponenter.
+
 ## Kjente tekniske fallgruver
 
 ### ID-porten
