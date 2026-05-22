@@ -13,7 +13,6 @@ interface Props {
   packages: PackageEntry[]
   connectionId?: string
   toId?: string
-  onDeleted?: (packageId: string) => void
 }
 
 function SletteKnapp({
@@ -92,15 +91,14 @@ function SletteKnapp({
   )
 }
 
-export function TilgangspakkerGruppe({ packages, connectionId, toId, onDeleted }: Props) {
+export function TilgangspakkerGruppe({ packages, connectionId, toId }: Props) {
   const [open, setOpen] = useState(false)
   const [localPackages, setLocalPackages] = useState(packages)
 
-  const canDelete = !!connectionId && !!toId && !!onDeleted
+  const canDelete = !!connectionId && !!toId
 
   function handleDeleted(packageId: string) {
     setLocalPackages((prev) => prev.filter((p) => p.id !== packageId))
-    onDeleted?.(packageId)
   }
 
   if (localPackages.length === 0) return null

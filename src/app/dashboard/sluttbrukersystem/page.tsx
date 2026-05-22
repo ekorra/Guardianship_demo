@@ -54,7 +54,6 @@ function ConnectionCard({
         packages={packageEntries}
         connectionId={canDelete ? conn.id : undefined}
         toId={canDelete ? conn.toId : undefined}
-        onDeleted={canDelete ? () => {} : undefined}
       />
       <RollerGruppe roles={roleEntries} />
     </li>
