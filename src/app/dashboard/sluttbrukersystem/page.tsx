@@ -3,9 +3,12 @@ import { getAllConnections } from "@/lib/altinnEnduser"
 import type { ReceivedConnection } from "@/lib/altinnEnduser"
 import { getRoleMetaMap } from "@/lib/roles"
 import type { RoleMeta } from "@/lib/roles"
+import { getPackageMetaMap } from "@/lib/packageMeta"
+import type { PackageMeta } from "@/lib/packageMeta"
 import type { TraceEntry } from "@/lib/trace"
 import { DevPanel } from "@/components/DevPanel"
 import { RollerGruppe } from "@/components/RollerGruppe"
+import { TilgangspakkerGruppe } from "@/components/TilgangspakkerGruppe"
 import { DelegereSkjema } from "@/components/DelegereSkjema"
 import { redirect } from "next/navigation"
 
@@ -16,15 +19,21 @@ interface RoleEntry {
   meta: RoleMeta | null
 }
 
+interface PackageEntry {
+  id: string
+  urn: string
+  meta: PackageMeta | null
+}
+
 function ConnectionCard({
   conn,
   roleEntries,
+  packageEntries,
 }: {
   conn: ReceivedConnection
   roleEntries: RoleEntry[]
+  packageEntries: PackageEntry[]
 }) {
-  const packages = conn.packages ?? []
-
   return (
     <li className="bg-gray-50 rounded-lg p-4">
       <div className="flex items-center gap-3 mb-3">
@@ -39,19 +48,7 @@ function ConnectionCard({
         </div>
       </div>
 
-      {packages.length > 0 && (
-        <div className="mt-2">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Tilgangspakker</p>
-          <ul className="space-y-1">
-            {packages.map((pkg) => (
-              <li key={pkg.id} className="text-xs text-gray-700 font-mono bg-white rounded px-2 py-1 border border-gray-100">
-                {pkg.urn}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
+      <TilgangspakkerGruppe packages={packageEntries} />
       <RollerGruppe roles={roleEntries} />
     </li>
   )
@@ -68,6 +65,7 @@ export default async function SluttbrukersystemPage() {
   let receivedConnections: ReceivedConnection[] = []
   let givenConnections: ReceivedConnection[] = []
   let roleMetaMap = new Map<string, RoleMeta>()
+  let packageMetaMap = new Map<string, PackageMeta>()
   let receivedError: string | null = null
   let givenError: string | null = null
 
@@ -76,10 +74,17 @@ export default async function SluttbrukersystemPage() {
       const { received, given } = await getAllConnections(accessToken, pid, isDev ? traces : undefined)
       receivedConnections = received
       givenConnections = given
-      const allRoleIds = [...received, ...given].flatMap((c) => (c.roles ?? []).map((r) => r.id))
-      if (allRoleIds.length > 0) {
-        roleMetaMap = await getRoleMetaMap(allRoleIds, isDev ? traces : undefined)
-      }
+      const allConnections = [...received, ...given]
+      const allRoleIds = allConnections.flatMap((c) => (c.roles ?? []).map((r) => r.id))
+      const allPackageIds = allConnections.flatMap((c) => (c.packages ?? []).map((p) => p.id))
+      await Promise.all([
+        allRoleIds.length > 0
+          ? getRoleMetaMap(allRoleIds, isDev ? traces : undefined).then((m) => { roleMetaMap = m })
+          : Promise.resolve(),
+        allPackageIds.length > 0
+          ? getPackageMetaMap(allPackageIds, isDev ? traces : undefined).then((m) => { packageMetaMap = m })
+          : Promise.resolve(),
+      ])
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Ukjent feil"
       receivedError = msg
@@ -139,8 +144,13 @@ export default async function SluttbrukersystemPage() {
                     id: r.id,
                     meta: roleMetaMap.get(r.id) ?? null,
                   }))
+                  const packageEntries = (conn.packages ?? []).map((p) => ({
+                    id: p.id,
+                    urn: p.urn,
+                    meta: packageMetaMap.get(p.id) ?? null,
+                  }))
                   return (
-                    <ConnectionCard key={conn.party.id} conn={conn} roleEntries={roleEntries} />
+                    <ConnectionCard key={conn.party.id} conn={conn} roleEntries={roleEntries} packageEntries={packageEntries} />
                   )
                 })}
               </ul>
@@ -161,8 +171,13 @@ export default async function SluttbrukersystemPage() {
                     id: r.id,
                     meta: roleMetaMap.get(r.id) ?? null,
                   }))
+                  const packageEntries = (conn.packages ?? []).map((p) => ({
+                    id: p.id,
+                    urn: p.urn,
+                    meta: packageMetaMap.get(p.id) ?? null,
+                  }))
                   return (
-                    <ConnectionCard key={conn.party.id} conn={conn} roleEntries={roleEntries} />
+                    <ConnectionCard key={conn.party.id} conn={conn} roleEntries={roleEntries} packageEntries={packageEntries} />
                   )
                 })}
               </ul>
