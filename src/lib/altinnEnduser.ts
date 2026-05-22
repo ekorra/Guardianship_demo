@@ -7,9 +7,21 @@ const BASE_URL =
 
 async function exchangeIdPortenToken(accessToken: string, traces?: TraceEntry[]): Promise<string> {
   const t0 = Date.now()
-  const response = await fetch(EXCHANGE_URL, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  })
+  let response: Response
+  try {
+    response = await fetch(EXCHANGE_URL, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+  } catch (err) {
+    const durationMs = Date.now() - t0
+    traces?.push({
+      name: "ID-porten token-innveksling",
+      request: { method: "GET", url: EXCHANGE_URL },
+      response: { status: 0, body: String(err) },
+      durationMs,
+    })
+    throw err
+  }
   const durationMs = Date.now() - t0
 
   if (!response.ok) {
@@ -37,12 +49,24 @@ async function getOwnPartyUuid(altinnToken: string, pid: string, traces?: TraceE
   const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
   const url = `${BASE_URL}/authorizedparties`
   const t0 = Date.now()
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${altinnToken}`,
-      ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
-    },
-  })
+  let response: Response
+  try {
+    response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${altinnToken}`,
+        ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
+      },
+    })
+  } catch (err) {
+    const durationMs = Date.now() - t0
+    traces?.push({
+      name: "Altinn authorizedparties",
+      request: { method: "GET", url },
+      response: { status: 0, body: String(err) },
+      durationMs,
+    })
+    throw err
+  }
   const durationMs = Date.now() - t0
 
   if (!response.ok) {
@@ -90,16 +114,27 @@ async function createConnection(
   const url = `${BASE_URL}/connections?party=${partyUuid}`
   const body = { personIdentifier: toPid, lastName: toLastName }
   const t0 = Date.now()
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${altinnToken}`,
-      "Content-Type": "application/json",
-      ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
-    },
-    body: JSON.stringify(body),
-  })
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${altinnToken}`,
+        "Content-Type": "application/json",
+        ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
+      },
+      body: JSON.stringify(body),
+    })
+  } catch (err) {
+    const durationMs = Date.now() - t0
+    traces?.push({
+      name: "Altinn opprett kobling",
+      request: { method: "POST", url, body },
+      response: { status: 0, body: String(err) },
+      durationMs,
+    })
+    throw err
+  }
   const durationMs = Date.now() - t0
 
   if (!response.ok) {
@@ -137,16 +172,27 @@ async function delegatePackage(
   const url = `${BASE_URL}/connections/accesspackages?party=${partyUuid}&connection=${connectionId}&to=${toPartyUuid}&package=${encodeURIComponent(packageId)}`
   const body = { personIdentifier: toPid, lastName: toLastName }
   const t0 = Date.now()
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${altinnToken}`,
-      "Content-Type": "application/json",
-      ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
-    },
-    body: JSON.stringify(body),
-  })
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${altinnToken}`,
+        "Content-Type": "application/json",
+        ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
+      },
+      body: JSON.stringify(body),
+    })
+  } catch (err) {
+    const durationMs = Date.now() - t0
+    traces?.push({
+      name: `Altinn deleger pakke (${packageId})`,
+      request: { method: "POST", url, body },
+      response: { status: 0, body: String(err) },
+      durationMs,
+    })
+    throw err
+  }
   const durationMs = Date.now() - t0
 
   if (!response.ok) {

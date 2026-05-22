@@ -119,6 +119,71 @@ describe("delegateAccessPackages — traces", () => {
     }
   })
 
+  it("logger trace-entry med status 0 ved nettverksfeil i token-innveksling", async () => {
+    const networkError = new TypeError("fetch failed")
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValueOnce(networkError))
+
+    const traces: TraceEntry[] = []
+    await expect(
+      delegateAccessPackages(ACCESS_TOKEN, PID, TO_PID, TO_LAST_NAME, [PACKAGE_ID], traces)
+    ).rejects.toThrow("fetch failed")
+
+    expect(traces).toHaveLength(1)
+    expect(traces[0].name).toBe("ID-porten token-innveksling")
+    expect(traces[0].response.status).toBe(0)
+  })
+
+  it("logger trace-entry med status 0 ved nettverksfeil i authorizedparties", async () => {
+    const networkError = new TypeError("fetch failed")
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(makeOkResponse(ALTINN_TOKEN))
+      .mockRejectedValueOnce(networkError))
+
+    const traces: TraceEntry[] = []
+    await expect(
+      delegateAccessPackages(ACCESS_TOKEN, PID, TO_PID, TO_LAST_NAME, [PACKAGE_ID], traces)
+    ).rejects.toThrow("fetch failed")
+
+    expect(traces).toHaveLength(2)
+    expect(traces[1].name).toBe("Altinn authorizedparties")
+    expect(traces[1].response.status).toBe(0)
+  })
+
+  it("logger trace-entry med status 0 ved nettverksfeil i kobling-oppretting", async () => {
+    const networkError = new TypeError("fetch failed")
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(makeOkResponse(ALTINN_TOKEN))
+      .mockResolvedValueOnce(makeOkResponse({ data: [{ partyUuid: PARTY_UUID, personIdentifier: PID }] }))
+      .mockRejectedValueOnce(networkError))
+
+    const traces: TraceEntry[] = []
+    await expect(
+      delegateAccessPackages(ACCESS_TOKEN, PID, TO_PID, TO_LAST_NAME, [PACKAGE_ID], traces)
+    ).rejects.toThrow("fetch failed")
+
+    expect(traces).toHaveLength(3)
+    expect(traces[2].name).toBe("Altinn opprett kobling")
+    expect(traces[2].response.status).toBe(0)
+  })
+
+  it("logger trace-entry med status 0 ved nettverksfeil i pakkedelegering", async () => {
+    const networkError = new TypeError("fetch failed")
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(makeOkResponse(ALTINN_TOKEN))
+      .mockResolvedValueOnce(makeOkResponse({ data: [{ partyUuid: PARTY_UUID, personIdentifier: PID }] }))
+      .mockResolvedValueOnce(makeOkResponse({ id: CONNECTION_ID, toId: TO_PARTY_UUID }))
+      .mockRejectedValueOnce(networkError))
+
+    const traces: TraceEntry[] = []
+    await expect(
+      delegateAccessPackages(ACCESS_TOKEN, PID, TO_PID, TO_LAST_NAME, [PACKAGE_ID], traces)
+    ).rejects.toThrow("fetch failed")
+
+    expect(traces).toHaveLength(4)
+    expect(traces[3].name).toContain("Altinn deleger pakke")
+    expect(traces[3].response.status).toBe(0)
+  })
+
   it("samler traces fra flere pakker i parallell", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(makeOkResponse(ALTINN_TOKEN))
