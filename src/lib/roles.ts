@@ -19,7 +19,12 @@ import type { TraceEntry } from "./trace"
 const cache = new Map<string, RoleMeta>()
 
 async function getRoleMeta(id: string, traces?: TraceEntry[]): Promise<RoleMeta | null> {
-  if (cache.has(id)) return cache.get(id)!
+  if (cache.has(id)) {
+    const cached = cache.get(id)!
+    const url = `${BASE_URL}/${id}`
+    traces?.push({ name: `Rolle meta (${cached.code}) [cache]`, group: "roller-meta", request: { method: "GET", url }, response: { status: 200, body: cached }, durationMs: 0 })
+    return cached
+  }
 
   const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
   const url = `${BASE_URL}/${id}`
