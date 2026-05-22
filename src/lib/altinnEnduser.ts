@@ -336,7 +336,7 @@ export async function getAllConnections(
 
   async function fetchConnections(direction: "to" | "from"): Promise<ReceivedConnection[]> {
     const traceName = direction === "to" ? "Altinn mottatte koblinger" : "Altinn avgitte koblinger"
-    const url = `${BASE_URL}/connections?party=${partyUuid}&${direction}=${partyUuid}`
+    const url = `${BASE_URL}/connections?party=${partyUuid}&${direction}=${partyUuid}&includeAccessPackages=true`
     const t0 = Date.now()
     let response: Response
     try {
