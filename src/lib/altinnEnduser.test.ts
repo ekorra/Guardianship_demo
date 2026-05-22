@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { delegateAccessPackages, getReceivedConnections } from "./altinnEnduser"
+import { delegateAccessPackages, getReceivedConnections, getGivenConnections } from "./altinnEnduser"
 import type { TraceEntry } from "./trace"
 
 const ACCESS_TOKEN = "mock-access-token"
@@ -265,6 +265,69 @@ describe("getReceivedConnections — traces", () => {
 
     const traces: TraceEntry[] = []
     await expect(getReceivedConnections(ACCESS_TOKEN, PID, traces)).rejects.toThrow("fetch failed")
+
+    expect(traces).toHaveLength(3)
+    expect(traces[2].response.status).toBe(0)
+  })
+})
+
+describe("getGivenConnections — traces", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("returnerer avgitte koblinger og fyller traces ved suksess", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(makeOkResponse(ALTINN_TOKEN))
+      .mockResolvedValueOnce(makeOkResponse({ data: [{ partyUuid: PARTY_UUID, personIdentifier: PID }] }))
+      .mockResolvedValueOnce(makeOkResponse({ data: [mockConnection] }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const traces: TraceEntry[] = []
+    const result = await getGivenConnections(ACCESS_TOKEN, PID, traces)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].party.name).toBe("Kari Nordmann")
+    expect(traces).toHaveLength(3)
+    expect(traces[2].name).toBe("Altinn avgitte koblinger")
+    expect(traces[2].response.status).toBe(200)
+  })
+
+  it("returnerer tomt array når ingen koblinger finnes", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(makeOkResponse(ALTINN_TOKEN))
+      .mockResolvedValueOnce(makeOkResponse({ data: [{ partyUuid: PARTY_UUID, personIdentifier: PID }] }))
+      .mockResolvedValueOnce(makeOkResponse({ data: [] }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const result = await getGivenConnections(ACCESS_TOKEN, PID)
+    expect(result).toEqual([])
+  })
+
+  it("fyller trace-entry med feil-status og kaster ved HTTP-feil", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(makeOkResponse(ALTINN_TOKEN))
+      .mockResolvedValueOnce(makeOkResponse({ data: [{ partyUuid: PARTY_UUID, personIdentifier: PID }] }))
+      .mockResolvedValueOnce(makeErrorResponse(403, "Forbidden"))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const traces: TraceEntry[] = []
+    await expect(getGivenConnections(ACCESS_TOKEN, PID, traces)).rejects.toThrow("403")
+
+    expect(traces).toHaveLength(3)
+    expect(traces[2].name).toBe("Altinn avgitte koblinger")
+    expect(traces[2].response.status).toBe(403)
+  })
+
+  it("logger trace-entry med status 0 ved nettverksfeil", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(makeOkResponse(ALTINN_TOKEN))
+      .mockResolvedValueOnce(makeOkResponse({ data: [{ partyUuid: PARTY_UUID, personIdentifier: PID }] }))
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const traces: TraceEntry[] = []
+    await expect(getGivenConnections(ACCESS_TOKEN, PID, traces)).rejects.toThrow("fetch failed")
 
     expect(traces).toHaveLength(3)
     expect(traces[2].response.status).toBe(0)

@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth"
-import { getReceivedConnections } from "@/lib/altinnEnduser"
+import { getReceivedConnections, getGivenConnections } from "@/lib/altinnEnduser"
 import type { ReceivedConnection } from "@/lib/altinnEnduser"
 import { getRoleMetaMap } from "@/lib/roles"
 import type { RoleMeta } from "@/lib/roles"
@@ -64,19 +64,30 @@ export default async function SluttbrukersystemPage() {
   const accessToken = session.accessToken
   const traces: TraceEntry[] = []
 
-  let connections: ReceivedConnection[] = []
+  let receivedConnections: ReceivedConnection[] = []
+  let givenConnections: ReceivedConnection[] = []
   let roleMetaMap = new Map<string, RoleMeta>()
-  let error: string | null = null
+  let receivedError: string | null = null
+  let givenError: string | null = null
 
   if (pid && accessToken) {
-    try {
-      connections = await getReceivedConnections(accessToken, pid, isDev ? traces : undefined)
-      const allRoleIds = connections.flatMap((c) => (c.roles ?? []).map((r) => r.id))
-      if (allRoleIds.length > 0) {
-        roleMetaMap = await getRoleMetaMap(allRoleIds, isDev ? traces : undefined)
-      }
-    } catch (err) {
-      error = err instanceof Error ? err.message : "Ukjent feil"
+    const [receivedResult, givenResult] = await Promise.allSettled([
+      getReceivedConnections(accessToken, pid, isDev ? traces : undefined),
+      getGivenConnections(accessToken, pid, isDev ? traces : undefined),
+    ])
+    if (receivedResult.status === "fulfilled") {
+      receivedConnections = receivedResult.value
+    } else {
+      receivedError = receivedResult.reason instanceof Error ? receivedResult.reason.message : "Ukjent feil"
+    }
+    if (givenResult.status === "fulfilled") {
+      givenConnections = givenResult.value
+    } else {
+      givenError = givenResult.reason instanceof Error ? givenResult.reason.message : "Ukjent feil"
+    }
+    const allRoleIds = [...receivedConnections, ...givenConnections].flatMap((c) => (c.roles ?? []).map((r) => r.id))
+    if (allRoleIds.length > 0) {
+      roleMetaMap = await getRoleMetaMap(allRoleIds, isDev ? traces : undefined)
     }
   }
 
@@ -113,16 +124,38 @@ export default async function SluttbrukersystemPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Mottatte fullmakter</h2>
 
-            {error ? (
-              <p className="text-sm text-red-600">Kunne ikke hente fullmakter: {error}</p>
-            ) : connections.length === 0 ? (
+            {receivedError ? (
+              <p className="text-sm text-red-600">Kunne ikke hente fullmakter: {receivedError}</p>
+            ) : receivedConnections.length === 0 ? (
               <p className="text-sm text-gray-400 italic">Ingen mottatte fullmakter funnet.</p>
             ) : (
               <ul className="space-y-3">
-                {connections.map((conn) => {
+                {receivedConnections.map((conn) => {
+                  const roleEntries = (conn.roles ?? []).map((r) => ({
+                    id: r.id,
+                    meta: roleMetaMap.get(r.id) ?? null,
+                  }))
+                  return (
+                    <ConnectionCard key={conn.party.id} conn={conn} roleEntries={roleEntries} />
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Avgitte fullmakter</h2>
+
+            {givenError ? (
+              <p className="text-sm text-red-600">Kunne ikke hente fullmakter: {givenError}</p>
+            ) : givenConnections.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">Ingen avgitte fullmakter funnet.</p>
+            ) : (
+              <ul className="space-y-3">
+                {givenConnections.map((conn) => {
                   const roleEntries = (conn.roles ?? []).map((r) => ({
                     id: r.id,
                     meta: roleMetaMap.get(r.id) ?? null,
