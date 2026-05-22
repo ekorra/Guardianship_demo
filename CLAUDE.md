@@ -17,19 +17,27 @@ Next.js 15 demo-app (App Router) som viser vergemåls- og innbyggerfullmakter fo
 - `src/lib/altinn.ts` — `getAuthorizedParties`, `isVergePart`, `isInnbyggerPart`, `getVergemålGruppert`, `getInnbyggerGruppert`
 - `src/lib/accesspackages.ts` — Henter og cacher pakke-metadata fra Altinn AM eksport-API (1t TTL)
 - `src/lib/pdp.ts` — PDP-sjekk mot Altinn Authorization API (XACML JSON Profile)
-- `src/lib/altinnEnduser.ts` — Enduser-token-innveksling og delegering: `delegateAccessPackages(idToken, pid, toPid, toLastName, packageIds[])`
+- `src/lib/altinnEnduser.ts` — Enduser-token-innveksling, delegering og sletting:
+  - `delegateAccessPackages(accessToken, pid, toPid, toLastName, packageIds[])` — oppretter kobling og delegerer pakker
+  - `deleteAccessPackage(accessToken, pid, toPartyUuid, packageId)` — sletter enkeltpakke via `DELETE /enduser/connections/accesspackages?party=&from=&to=&packageId=`
+  - `getAllConnections(accessToken, pid)` — henter mottatte og avgitte koblinger parallelt med `&includeAccessPackages=true`
+- `src/lib/packageMeta.ts` — Henter og cacher pakke-metadata fra `/meta/info/accesspackages/package/{uuid}` (bruker UUID, ikke URN)
+- `src/lib/roles.ts` — Henter og cacher rolle-metadata fra Altinn
 - `src/lib/register.ts` — Ubrukt; opprinnelig register-oppslag via Maskinporten (beholdt for referanse)
 
 ### API-ruter
-- `src/app/api/delegate/route.ts` — POST-rute som leser `pid`+`idToken` fra sesjon og delegerer tilgangspakker via `altinnEnduser.ts`
+- `src/app/api/delegate/route.ts` — POST delegerer tilgangspakker; DELETE sletter enkeltpakke (`toPartyUuid` + `packageId`)
 
 ### UI-komponenter
 - `src/app/dashboard/page.tsx` — Dashboard (Server Component)
+- `src/app/dashboard/sluttbrukersystem/page.tsx` — Sluttbrukersystem-side: DelegereSkjema, mottatte og avgitte fullmakter med pakkenavn
 - `src/components/VergemålDetaljer.tsx` — Accordion-liste over tilgangspakker (`variant="vergemål"|"innbygger"`)
 - `src/components/TilgangKnapp.tsx` — Knapp for å sjekke PDP-tilgang; lytter på `resource-change`-event
 - `src/components/ResourceVelger.tsx` — Felles ressursvelger (nedtrekksliste + legg-til-skjema med action-felt)
 - `src/components/DelegereSkjema.tsx` — Multi-stegs skjema (form → velg → bekreft → suksess/feil) for å delegere fullmakt; viser kun `mottatt: true`-pakker; POSTer til `/api/delegate`
-- `src/components/DevPanel.tsx` — Dev-panel for å vise API-traces
+- `src/components/RollerGruppe.tsx` — Sammenleggbar liste over roller gruppert per provider
+- `src/components/TilgangspakkerGruppe.tsx` — Sammenleggbar liste over tilgangspakker med pakkenavn; støtter inline slett-knapp (✕) med bekreftelsesdialog for avgitte koblinger
+- `src/components/DevPanel.tsx` — Dev-panel for å vise API-traces; støtter gruppering (`group`-felt på TraceEntry) for å skjule verbose meta-kall
 
 ### Konfigurasjon og CI/CD
 - `src/lib/resources.ts` — 5 prekonfigurerte ressurser, localStorage-nøkler, event-navn
@@ -108,14 +116,17 @@ if (data.traces?.length) {
 - Maskinporten-token må veksles inn mot Altinn-token før bruk: `GET /authentication/api/v1/exchange/maskinporten`
 - Subscription key sendes som `Ocp-Apim-Subscription-Key`-header
 
-### Altinn enduser (brukerstyrt delegering)
+### Altinn enduser (brukerstyrt delegering og sletting)
 - ID-porten access_token (ikke id_token) veksles til Altinn enduser-token: `GET /authentication/api/v1/exchange/id-porten`
 - **`altinn:register.read` er ikke et gyldig Maskinporten-scope** — ikke forsøk å bruke dette
-- Krever to scopes på ID-porten-klienten (sluttbruker samtykker ved innlogging): `altinn:accessmanagement/enduser:connections:toothers.write` og `altinn:accessmanagement/authorizedparties`
+- Krever disse scopene på ID-porten-klienten: `altinn:accessmanagement/enduser:connections:toothers.write`, `altinn:accessmanagement/enduser:connections:toothers.read`, `altinn:accessmanagement/enduser:connections:fromothers.read`, `altinn:accessmanagement/authorizedparties`
 - **Separat ID-porten-klient nødvendig** for Altinn-scopes — disse kan ikke legges til en eksisterende klient uten at den er konfigurert for det
 - Innlogget brukers `partyUuid` hentes fra `GET /enduser/authorizedparties`; responsen er `{ data: [...] }` (ikke direkte array); filtrer på `personId === pid`
 - Kobling opprettes med `POST /enduser/connections?party={partyUuid}` med body `{ personIdentifier, lastName }`; respons inneholder `{ id, toId, fromId, roleId }`
 - Tilgangspakker delegeres med `POST /enduser/connections/accesspackages?party={fromPartyUuid}&connection={connectionId}&to={toId}&package={encodeURIComponent(packageId)}` — pakke-ID og mottaker er **query-parametere**, ikke body
+- Tilgangspakker slettes med `DELETE /enduser/connections/accesspackages?party={partyUuid}&from={partyUuid}&to={toPartyUuid}&packageId={packageId}` — **ikke** `connection`-parameter, og `packageId` (UUID) brukes fremfor `package` (URN)
+- For avgitte koblinger (fra=innlogget bruker) er `conn.party.id` mottakerens `partyUuid` — brukes direkte som `to`-parameter
+- Pakke-metadata hentes med UUID (ikke URN) fra `/meta/info/accesspackages/package/{uuid}` — APIet returnerer objekt, ikke array
 - `session.accessToken` (ID-porten access_token) brukes til exchange — `session.idToken` beholdes separat for logout (`id_token_hint`)
 
 ### E2E-tester
