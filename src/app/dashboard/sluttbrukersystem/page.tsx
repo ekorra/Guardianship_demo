@@ -73,7 +73,7 @@ export default async function SluttbrukersystemPage() {
       connections = await getReceivedConnections(accessToken, pid, isDev ? traces : undefined)
       const allRoleIds = connections.flatMap((c) => (c.roles ?? []).map((r) => r.id))
       if (allRoleIds.length > 0) {
-        roleMetaMap = await getRoleMetaMap(allRoleIds)
+        roleMetaMap = await getRoleMetaMap(allRoleIds, isDev ? traces : undefined)
       }
     } catch (err) {
       error = err instanceof Error ? err.message : "Ukjent feil"

@@ -14,32 +14,39 @@ export interface RoleMeta {
   }
 }
 
+import type { TraceEntry } from "./trace"
+
 const cache = new Map<string, RoleMeta>()
 
-async function getRoleMeta(id: string): Promise<RoleMeta | null> {
+async function getRoleMeta(id: string, traces?: TraceEntry[]): Promise<RoleMeta | null> {
   if (cache.has(id)) return cache.get(id)!
 
   const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
-  const res = await fetch(`${BASE_URL}/${id}`, {
+  const url = `${BASE_URL}/${id}`
+  const t0 = Date.now()
+  const res = await fetch(url, {
     headers: {
       ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
     },
   })
+  const durationMs = Date.now() - t0
 
   if (!res.ok) {
-    console.error(`getRoleMeta ${id}: ${res.status} ${await res.text()}`)
+    const body = await res.text()
+    traces?.push({ name: `Rolle meta (${id})`, group: "roller-meta", request: { method: "GET", url }, response: { status: res.status, body }, durationMs })
     return null
   }
 
   const raw = await res.json()
   const data = (Array.isArray(raw) ? raw[0] : raw) as RoleMeta
+  traces?.push({ name: `Rolle meta (${data.code})`, group: "roller-meta", request: { method: "GET", url }, response: { status: res.status, body: data }, durationMs })
   cache.set(id, data)
   return data
 }
 
-export async function getRoleMetaMap(ids: string[]): Promise<Map<string, RoleMeta>> {
+export async function getRoleMetaMap(ids: string[], traces?: TraceEntry[]): Promise<Map<string, RoleMeta>> {
   const unique = [...new Set(ids)]
-  const results = await Promise.allSettled(unique.map((id) => getRoleMeta(id)))
+  const results = await Promise.allSettled(unique.map((id) => getRoleMeta(id, traces)))
   const map = new Map<string, RoleMeta>()
   for (let i = 0; i < unique.length; i++) {
     const r = results[i]

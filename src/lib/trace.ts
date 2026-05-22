@@ -1,5 +1,6 @@
 export interface TraceEntry {
   name: string
+  group?: string
   request: {
     method: string
     url: string

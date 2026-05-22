@@ -69,6 +69,32 @@ function TraceItem({ entry }: { entry: TraceEntry }) {
   )
 }
 
+function TraceGroup({ name, entries }: { name: string; entries: TraceEntry[] }) {
+  const [open, setOpen] = useState(false)
+  const hasError = entries.some((e) => e.response.status >= 400 || e.response.status === 0)
+  return (
+    <li className="border border-gray-200 rounded">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-50 transition-colors"
+      >
+        <span className="flex items-center gap-3 text-sm">
+          <span className={`font-mono text-xs px-1.5 py-0.5 rounded ${hasError ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-500"}`}>
+            {entries.length}
+          </span>
+          <span className="font-medium text-gray-500 italic">{name}</span>
+        </span>
+        <span className="text-gray-400 text-xs">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <ul className="border-t border-gray-100 p-2 space-y-1.5">
+          {entries.map((entry, i) => <TraceItem key={i} entry={entry} />)}
+        </ul>
+      )}
+    </li>
+  )
+}
+
 export function DevPanel({ traces: initialTraces }: { traces: TraceEntry[] }) {
   const [open, setOpen] = useState(false)
   const [traces, setTraces] = useState(initialTraces)
@@ -81,6 +107,16 @@ export function DevPanel({ traces: initialTraces }: { traces: TraceEntry[] }) {
     window.addEventListener("dev-trace", onDevTrace)
     return () => window.removeEventListener("dev-trace", onDevTrace)
   }, [])
+
+  const ungrouped = traces.filter((e) => !e.group)
+  const groups = new Map<string, TraceEntry[]>()
+  for (const entry of traces) {
+    if (entry.group) {
+      const existing = groups.get(entry.group) ?? []
+      existing.push(entry)
+      groups.set(entry.group, existing)
+    }
+  }
 
   return (
     <>
@@ -119,7 +155,12 @@ export function DevPanel({ traces: initialTraces }: { traces: TraceEntry[] }) {
                 Ingen API-kall registrert.
               </li>
             ) : (
-              traces.map((entry, i) => <TraceItem key={i} entry={entry} />)
+              <>
+                {ungrouped.map((entry, i) => <TraceItem key={i} entry={entry} />)}
+                {[...groups.entries()].map(([groupName, entries]) => (
+                  <TraceGroup key={groupName} name={groupName} entries={entries} />
+                ))}
+              </>
             )}
           </ul>
         </div>
