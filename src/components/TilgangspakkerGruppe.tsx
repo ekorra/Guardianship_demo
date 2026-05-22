@@ -11,12 +11,99 @@ interface PackageEntry {
 
 interface Props {
   packages: PackageEntry[]
+  connectionId?: string
+  toId?: string
+  onDeleted?: (packageId: string) => void
 }
 
-export function TilgangspakkerGruppe({ packages }: Props) {
-  const [open, setOpen] = useState(false)
+function SletteKnapp({
+  packageEntry,
+  connectionId,
+  toId,
+  onDeleted,
+}: {
+  packageEntry: PackageEntry
+  connectionId: string
+  toId: string
+  onDeleted: (packageId: string) => void
+}) {
+  const [confirming, setConfirming] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  if (packages.length === 0) return null
+  async function handleDelete() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/delegate", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId, toPartyUuid: toId, packageId: packageEntry.id }),
+      })
+      const data = (await res.json()) as { ok?: boolean; error?: string; traces?: unknown[] }
+      if (data.traces?.length) {
+        window.dispatchEvent(new CustomEvent("dev-trace", { detail: data.traces }))
+      }
+      if (!res.ok) {
+        setError(data.error ?? "Ukjent feil")
+        setLoading(false)
+        setConfirming(false)
+        return
+      }
+      onDeleted(packageEntry.id)
+    } catch {
+      setError("Nettverksfeil")
+      setLoading(false)
+      setConfirming(false)
+    }
+  }
+
+  if (confirming) {
+    return (
+      <span className="flex items-center gap-1">
+        <span className="text-xs text-gray-500">Slette?</span>
+        <button
+          onClick={handleDelete}
+          disabled={loading}
+          className="text-xs text-white bg-red-600 hover:bg-red-700 rounded px-1.5 py-0.5 disabled:opacity-50"
+        >
+          {loading ? "…" : "Ja"}
+        </button>
+        <button
+          onClick={() => { setConfirming(false); setError(null) }}
+          disabled={loading}
+          className="text-xs text-gray-500 hover:text-gray-700"
+        >
+          Avbryt
+        </button>
+        {error && <span className="text-xs text-red-600 ml-1">{error}</span>}
+      </span>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => setConfirming(true)}
+      className="text-xs text-red-400 hover:text-red-600 ml-auto shrink-0"
+      title="Slett tilgangspakke"
+    >
+      ✕
+    </button>
+  )
+}
+
+export function TilgangspakkerGruppe({ packages, connectionId, toId, onDeleted }: Props) {
+  const [open, setOpen] = useState(false)
+  const [localPackages, setLocalPackages] = useState(packages)
+
+  const canDelete = !!connectionId && !!toId && !!onDeleted
+
+  function handleDeleted(packageId: string) {
+    setLocalPackages((prev) => prev.filter((p) => p.id !== packageId))
+    onDeleted?.(packageId)
+  }
+
+  if (localPackages.length === 0) return null
 
   return (
     <div className="mt-2">
@@ -27,15 +114,23 @@ export function TilgangspakkerGruppe({ packages }: Props) {
       >
         <span className="font-medium">Tilgangspakker</span>
         <span className="bg-green-200 text-green-800 rounded-full px-1.5 py-0.5 text-xs font-semibold leading-none">
-          {packages.length}
+          {localPackages.length}
         </span>
         <span className="ml-auto text-green-400">{open ? "▲" : "▼"}</span>
       </button>
       {open && (
         <ul className="mt-1 ml-2 space-y-0.5">
-          {packages.map((p) => (
-            <li key={p.id} className="text-xs text-gray-600 px-2 py-0.5">
-              {p.meta?.name ?? p.urn}
+          {localPackages.map((p) => (
+            <li key={p.id} className="flex items-center gap-1 text-xs text-gray-600 px-2 py-0.5">
+              <span className="flex-1">{p.meta?.name ?? p.urn}</span>
+              {canDelete && (
+                <SletteKnapp
+                  packageEntry={p}
+                  connectionId={connectionId}
+                  toId={toId}
+                  onDeleted={handleDeleted}
+                />
+              )}
             </li>
           ))}
         </ul>

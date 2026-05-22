@@ -29,10 +29,12 @@ function ConnectionCard({
   conn,
   roleEntries,
   packageEntries,
+  canDelete,
 }: {
   conn: ReceivedConnection
   roleEntries: RoleEntry[]
   packageEntries: PackageEntry[]
+  canDelete?: boolean
 }) {
   return (
     <li className="bg-gray-50 rounded-lg p-4">
@@ -48,7 +50,12 @@ function ConnectionCard({
         </div>
       </div>
 
-      <TilgangspakkerGruppe packages={packageEntries} />
+      <TilgangspakkerGruppe
+        packages={packageEntries}
+        connectionId={canDelete ? conn.id : undefined}
+        toId={canDelete ? conn.toId : undefined}
+        onDeleted={canDelete ? () => {} : undefined}
+      />
       <RollerGruppe roles={roleEntries} />
     </li>
   )
@@ -177,7 +184,7 @@ export default async function SluttbrukersystemPage() {
                     meta: packageMetaMap.get(p.id) ?? null,
                   }))
                   return (
-                    <ConnectionCard key={conn.party.id} conn={conn} roleEntries={roleEntries} packageEntries={packageEntries} />
+                    <ConnectionCard key={conn.party.id} conn={conn} roleEntries={roleEntries} packageEntries={packageEntries} canDelete />
                   )
                 })}
               </ul>

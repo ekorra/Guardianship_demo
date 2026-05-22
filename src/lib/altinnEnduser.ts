@@ -214,7 +214,73 @@ async function delegatePackage(
   })
 }
 
+async function deletePackage(
+  altinnToken: string,
+  partyUuid: string,
+  connectionId: string,
+  toPartyUuid: string,
+  packageId: string,
+  traces?: TraceEntry[],
+): Promise<void> {
+  const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
+  const url = `${BASE_URL}/connections/accesspackages?party=${partyUuid}&connection=${connectionId}&to=${toPartyUuid}&package=${encodeURIComponent(packageId)}`
+  const t0 = Date.now()
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${altinnToken}`,
+        ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
+      },
+    })
+  } catch (err) {
+    const durationMs = Date.now() - t0
+    traces?.push({
+      name: `Altinn slett pakke (${packageId})`,
+      request: { method: "DELETE", url },
+      response: { status: 0, body: String(err) },
+      durationMs,
+    })
+    throw err
+  }
+  const durationMs = Date.now() - t0
+
+  if (!response.ok) {
+    const errorBody = await response.text()
+    traces?.push({
+      name: `Altinn slett pakke (${packageId})`,
+      request: { method: "DELETE", url },
+      response: { status: response.status, body: errorBody },
+      durationMs,
+    })
+    throw new Error(`Sletting av pakke ${packageId} feilet: ${response.status} ${errorBody}`)
+  }
+
+  traces?.push({
+    name: `Altinn slett pakke (${packageId})`,
+    request: { method: "DELETE", url },
+    response: { status: response.status, body: "OK" },
+    durationMs,
+  })
+}
+
+export async function deleteAccessPackage(
+  accessToken: string,
+  pid: string,
+  connectionId: string,
+  toPartyUuid: string,
+  packageId: string,
+  traces?: TraceEntry[],
+): Promise<void> {
+  const altinnToken = await exchangeIdPortenToken(accessToken, traces)
+  const fromPartyUuid = await getOwnPartyUuid(altinnToken, pid, traces)
+  await deletePackage(altinnToken, fromPartyUuid, connectionId, toPartyUuid, packageId, traces)
+}
+
 export interface ReceivedConnection {
+  id?: string
+  toId?: string
   party: { id: string; name: string; type: string; personIdentifier?: string }
   roles: Array<{ id: string; code: string; urn: string }>
   packages: Array<{ id: string; urn: string }>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { delegateAccessPackages, getReceivedConnections, getGivenConnections } from "./altinnEnduser"
+import { delegateAccessPackages, deleteAccessPackage, getReceivedConnections, getGivenConnections } from "./altinnEnduser"
 import type { TraceEntry } from "./trace"
 
 const ACCESS_TOKEN = "mock-access-token"
@@ -198,6 +198,46 @@ describe("delegateAccessPackages — traces", () => {
 
     // 3 faste kall + 2 pakke-kall
     expect(traces).toHaveLength(5)
+  })
+})
+
+describe("deleteAccessPackage — traces", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("fyller traces med entry for hvert API-kall ved suksess", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(makeOkResponse(ALTINN_TOKEN))
+      .mockResolvedValueOnce(makeOkResponse({ data: [{ partyUuid: PARTY_UUID, personIdentifier: PID }] }))
+      .mockResolvedValueOnce(makeOkResponse("", 204))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const traces: TraceEntry[] = []
+    await deleteAccessPackage(ACCESS_TOKEN, PID, CONNECTION_ID, TO_PARTY_UUID, PACKAGE_ID, traces)
+
+    expect(traces).toHaveLength(3)
+    expect(traces[0].name).toBe("ID-porten token-innveksling")
+    expect(traces[1].name).toBe("Altinn authorizedparties")
+    expect(traces[2].name).toContain("Altinn slett pakke")
+    expect(traces[2].request.method).toBe("DELETE")
+  })
+
+  it("kaster og fyller trace-entry ved HTTP-feil på sletting", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(makeOkResponse(ALTINN_TOKEN))
+      .mockResolvedValueOnce(makeOkResponse({ data: [{ partyUuid: PARTY_UUID, personIdentifier: PID }] }))
+      .mockResolvedValueOnce(makeErrorResponse(404, "Not Found"))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const traces: TraceEntry[] = []
+    await expect(
+      deleteAccessPackage(ACCESS_TOKEN, PID, CONNECTION_ID, TO_PARTY_UUID, PACKAGE_ID, traces)
+    ).rejects.toThrow("404")
+
+    expect(traces).toHaveLength(3)
+    expect(traces[2].name).toContain("Altinn slett pakke")
+    expect(traces[2].response.status).toBe(404)
   })
 })
 
