@@ -217,13 +217,12 @@ async function delegatePackage(
 async function deletePackage(
   altinnToken: string,
   partyUuid: string,
-  connectionId: string,
   toPartyUuid: string,
   packageId: string,
   traces?: TraceEntry[],
 ): Promise<void> {
   const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
-  const url = `${BASE_URL}/connections/accesspackages?party=${partyUuid}&connection=${connectionId}&to=${toPartyUuid}&package=${encodeURIComponent(packageId)}`
+  const url = `${BASE_URL}/connections/accesspackages?party=${partyUuid}&from=${partyUuid}&to=${toPartyUuid}&packageId=${packageId}`
   const t0 = Date.now()
   let response: Response
   try {
@@ -268,19 +267,16 @@ async function deletePackage(
 export async function deleteAccessPackage(
   accessToken: string,
   pid: string,
-  connectionId: string,
   toPartyUuid: string,
   packageId: string,
   traces?: TraceEntry[],
 ): Promise<void> {
   const altinnToken = await exchangeIdPortenToken(accessToken, traces)
   const fromPartyUuid = await getOwnPartyUuid(altinnToken, pid, traces)
-  await deletePackage(altinnToken, fromPartyUuid, connectionId, toPartyUuid, packageId, traces)
+  await deletePackage(altinnToken, fromPartyUuid, toPartyUuid, packageId, traces)
 }
 
 export interface ReceivedConnection {
-  id?: string
-  toId?: string
   party: { id: string; name: string; type: string; personIdentifier?: string }
   roles: Array<{ id: string; code: string; urn: string }>
   packages: Array<{ id: string; urn: string }>

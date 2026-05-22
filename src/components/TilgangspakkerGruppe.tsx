@@ -11,18 +11,15 @@ interface PackageEntry {
 
 interface Props {
   packages: PackageEntry[]
-  connectionId?: string
   toId?: string
 }
 
 function SletteKnapp({
   packageEntry,
-  connectionId,
   toId,
   onDeleted,
 }: {
   packageEntry: PackageEntry
-  connectionId: string
   toId: string
   onDeleted: (packageId: string) => void
 }) {
@@ -37,7 +34,7 @@ function SletteKnapp({
       const res = await fetch("/api/delegate", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ connectionId, toPartyUuid: toId, packageId: packageEntry.id }),
+        body: JSON.stringify({ toPartyUuid: toId, packageId: packageEntry.id }),
       })
       const data = (await res.json()) as { ok?: boolean; error?: string; traces?: unknown[] }
       if (data.traces?.length) {
@@ -91,11 +88,11 @@ function SletteKnapp({
   )
 }
 
-export function TilgangspakkerGruppe({ packages, connectionId, toId }: Props) {
+export function TilgangspakkerGruppe({ packages, toId }: Props) {
   const [open, setOpen] = useState(false)
   const [localPackages, setLocalPackages] = useState(packages)
 
-  const canDelete = !!connectionId && !!toId
+  const canDelete = !!toId
 
   function handleDeleted(packageId: string) {
     setLocalPackages((prev) => prev.filter((p) => p.id !== packageId))
@@ -124,7 +121,6 @@ export function TilgangspakkerGruppe({ packages, connectionId, toId }: Props) {
               {canDelete && (
                 <SletteKnapp
                   packageEntry={p}
-                  connectionId={connectionId}
                   toId={toId}
                   onDeleted={handleDeleted}
                 />

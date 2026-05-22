@@ -52,8 +52,7 @@ function ConnectionCard({
 
       <TilgangspakkerGruppe
         packages={packageEntries}
-        connectionId={canDelete ? conn.id : undefined}
-        toId={canDelete ? conn.toId : undefined}
+        toId={canDelete ? conn.party.id : undefined}
       />
       <RollerGruppe roles={roleEntries} />
     </li>

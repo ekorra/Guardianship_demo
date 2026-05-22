@@ -214,7 +214,7 @@ describe("deleteAccessPackage — traces", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const traces: TraceEntry[] = []
-    await deleteAccessPackage(ACCESS_TOKEN, PID, CONNECTION_ID, TO_PARTY_UUID, PACKAGE_ID, traces)
+    await deleteAccessPackage(ACCESS_TOKEN, PID, TO_PARTY_UUID, PACKAGE_ID, traces)
 
     expect(traces).toHaveLength(3)
     expect(traces[0].name).toBe("ID-porten token-innveksling")
@@ -232,7 +232,7 @@ describe("deleteAccessPackage — traces", () => {
 
     const traces: TraceEntry[] = []
     await expect(
-      deleteAccessPackage(ACCESS_TOKEN, PID, CONNECTION_ID, TO_PARTY_UUID, PACKAGE_ID, traces)
+      deleteAccessPackage(ACCESS_TOKEN, PID, TO_PARTY_UUID, PACKAGE_ID, traces)
     ).rejects.toThrow("404")
 
     expect(traces).toHaveLength(3)

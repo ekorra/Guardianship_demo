@@ -48,24 +48,24 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Ikke innlogget" }, { status: 401 })
   }
 
-  let body: { connectionId?: string; toPartyUuid?: string; packageId?: string }
+  let body: { toPartyUuid?: string; packageId?: string }
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: "Ugyldig forespørsel" }, { status: 400 })
   }
 
-  const { connectionId, toPartyUuid, packageId } = body
-  if (!connectionId || !toPartyUuid || !packageId) {
+  const { toPartyUuid, packageId } = body
+  if (!toPartyUuid || !packageId) {
     return NextResponse.json(
-      { error: "connectionId, toPartyUuid og packageId er påkrevd" },
+      { error: "toPartyUuid og packageId er påkrevd" },
       { status: 400 },
     )
   }
 
   const traces: TraceEntry[] = []
   try {
-    await deleteAccessPackage(accessToken, pid, connectionId, toPartyUuid, packageId, isDev ? traces : undefined)
+    await deleteAccessPackage(accessToken, pid, toPartyUuid, packageId, isDev ? traces : undefined)
     return NextResponse.json({ ok: true, traces: isDev ? traces : undefined })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Ukjent feil"
