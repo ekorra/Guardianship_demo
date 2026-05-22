@@ -1,15 +1,28 @@
 import { auth } from "@/lib/auth"
 import { getReceivedConnections } from "@/lib/altinnEnduser"
 import type { ReceivedConnection } from "@/lib/altinnEnduser"
+import { getRoleMetaMap } from "@/lib/roles"
+import type { RoleMeta } from "@/lib/roles"
 import type { TraceEntry } from "@/lib/trace"
 import { DevPanel } from "@/components/DevPanel"
+import { RollerGruppe } from "@/components/RollerGruppe"
 import { redirect } from "next/navigation"
 
 const isDev = process.env.NODE_ENV === "development"
 
-function ConnectionCard({ conn }: { conn: ReceivedConnection }) {
+interface RoleEntry {
+  id: string
+  meta: RoleMeta | null
+}
+
+function ConnectionCard({
+  conn,
+  roleEntries,
+}: {
+  conn: ReceivedConnection
+  roleEntries: RoleEntry[]
+}) {
   const packages = conn.packages ?? []
-  const roles = conn.roles ?? []
 
   return (
     <li className="bg-gray-50 rounded-lg p-4">
@@ -38,18 +51,7 @@ function ConnectionCard({ conn }: { conn: ReceivedConnection }) {
         </div>
       )}
 
-      {roles.length > 0 && (
-        <div className="mt-2">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Roller</p>
-          <ul className="flex flex-wrap gap-1">
-            {roles.map((role) => (
-              <li key={role.id} className="text-xs bg-blue-50 text-blue-700 rounded px-2 py-0.5">
-                {role.code}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <RollerGruppe roles={roleEntries} />
     </li>
   )
 }
@@ -63,11 +65,16 @@ export default async function SluttbrukersystemPage() {
   const traces: TraceEntry[] = []
 
   let connections: ReceivedConnection[] = []
+  let roleMetaMap = new Map<string, RoleMeta>()
   let error: string | null = null
 
   if (pid && accessToken) {
     try {
       connections = await getReceivedConnections(accessToken, pid, isDev ? traces : undefined)
+      const allRoleIds = connections.flatMap((c) => (c.roles ?? []).map((r) => r.id))
+      if (allRoleIds.length > 0) {
+        roleMetaMap = await getRoleMetaMap(allRoleIds)
+      }
     } catch (err) {
       error = err instanceof Error ? err.message : "Ukjent feil"
     }
@@ -115,9 +122,15 @@ export default async function SluttbrukersystemPage() {
               <p className="text-sm text-gray-400 italic">Ingen mottatte fullmakter funnet.</p>
             ) : (
               <ul className="space-y-3">
-                {connections.map((conn) => (
-                  <ConnectionCard key={conn.party.id} conn={conn} />
-                ))}
+                {connections.map((conn) => {
+                  const roleEntries = (conn.roles ?? []).map((r) => ({
+                    id: r.id,
+                    meta: roleMetaMap.get(r.id) ?? null,
+                  }))
+                  return (
+                    <ConnectionCard key={conn.party.id} conn={conn} roleEntries={roleEntries} />
+                  )
+                })}
               </ul>
             )}
           </div>

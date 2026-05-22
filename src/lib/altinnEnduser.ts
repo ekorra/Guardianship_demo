@@ -216,7 +216,7 @@ async function delegatePackage(
 
 export interface ReceivedConnection {
   party: { id: string; name: string; type: string }
-  roles: Array<{ id: string; code: string }>
+  roles: Array<{ id: string; code: string; urn: string }>
   packages: Array<{ id: string; urn: string }>
   resource: unknown[]
 }
@@ -263,14 +263,14 @@ export async function getReceivedConnections(
   }
 
   const raw = await response.json()
-  const data: ReceivedConnection[] = Array.isArray(raw) ? raw : ((raw as { data?: ReceivedConnection[] }).data ?? [])
+  const connections: ReceivedConnection[] = Array.isArray(raw) ? raw : ((raw as { data?: ReceivedConnection[] }).data ?? [])
   traces?.push({
     name: "Altinn mottatte koblinger",
     request: { method: "GET", url },
     response: { status: response.status, body: raw },
     durationMs,
   })
-  return data
+  return connections
 }
 
 export async function delegateAccessPackages(
