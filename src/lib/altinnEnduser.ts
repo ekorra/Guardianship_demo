@@ -428,6 +428,158 @@ export async function getAllConnections(
   return { received, given }
 }
 
+export interface AccessRequest {
+  id: string
+  status: string
+  from?: { id: string; name: string }
+  to?: { id: string; name: string }
+  package?: { id: string; urn: string; name?: string }
+  created?: string
+}
+
+export async function createPackageRequest(
+  accessToken: string,
+  pid: string,
+  toPid: string,
+  toLastName: string,
+  packageUrn: string,
+  traces?: TraceEntry[],
+): Promise<void> {
+  const altinnToken = await exchangeIdPortenToken(accessToken, traces)
+  const fromPartyUuid = await getOwnPartyUuid(altinnToken, pid, traces)
+  const connection = await createConnection(altinnToken, fromPartyUuid, toPid, toLastName, traces)
+  const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
+  const url = `${BASE_URL}/request/package?party=${fromPartyUuid}&to=${connection.toId}&package=${encodeURIComponent(packageUrn)}`
+  const t0 = Date.now()
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${altinnToken}`,
+        ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
+      },
+    })
+  } catch (err) {
+    traces?.push({ name: "Altinn opprett forespørsel", request: { method: "POST", url }, response: { status: 0, body: String(err) }, durationMs: Date.now() - t0 })
+    throw err
+  }
+  const durationMs = Date.now() - t0
+  if (!response.ok) {
+    const errorBody = await response.text()
+    traces?.push({ name: "Altinn opprett forespørsel", request: { method: "POST", url }, response: { status: response.status, body: errorBody }, durationMs })
+    throw new Error(`Opprettelse av forespørsel feilet: ${response.status} ${errorBody}`)
+  }
+  const data = await response.json()
+  traces?.push({ name: "Altinn opprett forespørsel", request: { method: "POST", url }, response: { status: response.status, body: data }, durationMs })
+}
+
+async function fetchRequests(
+  altinnToken: string,
+  partyUuid: string,
+  direction: "sent" | "received",
+  subscriptionKey: string | undefined,
+  traces?: TraceEntry[],
+): Promise<AccessRequest[]> {
+  const traceName = direction === "sent" ? "Altinn sendte forespørsler" : "Altinn mottatte forespørsler"
+  const url = `${BASE_URL}/request/${direction}?party=${partyUuid}`
+  const t0 = Date.now()
+  let response: Response
+  try {
+    response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${altinnToken}`,
+        ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
+      },
+    })
+  } catch (err) {
+    traces?.push({ name: traceName, request: { method: "GET", url }, response: { status: 0, body: String(err) }, durationMs: Date.now() - t0 })
+    throw err
+  }
+  const durationMs = Date.now() - t0
+  if (!response.ok) {
+    const errorBody = await response.text()
+    traces?.push({ name: traceName, request: { method: "GET", url }, response: { status: response.status, body: errorBody }, durationMs })
+    throw new Error(`${traceName} feilet: ${response.status} ${errorBody}`)
+  }
+  const raw = await response.json()
+  const requests: AccessRequest[] = Array.isArray(raw) ? raw : ((raw as { data?: AccessRequest[] }).data ?? [])
+  traces?.push({ name: traceName, request: { method: "GET", url }, response: { status: response.status, body: raw }, durationMs })
+  return requests
+}
+
+export async function getAllRequests(
+  accessToken: string,
+  pid: string,
+  traces?: TraceEntry[],
+): Promise<{ sent: AccessRequest[]; received: AccessRequest[] }> {
+  const altinnToken = await exchangeIdPortenToken(accessToken, traces)
+  const partyUuid = await getOwnPartyUuid(altinnToken, pid, traces)
+  const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
+  const [sent, received] = await Promise.all([
+    fetchRequests(altinnToken, partyUuid, "sent", subscriptionKey, traces),
+    fetchRequests(altinnToken, partyUuid, "received", subscriptionKey, traces),
+  ])
+  return { sent, received }
+}
+
+async function respondToRequest(
+  altinnToken: string,
+  partyUuid: string,
+  requestId: string,
+  action: "approve" | "reject",
+  subscriptionKey: string | undefined,
+  traces?: TraceEntry[],
+): Promise<void> {
+  const traceName = action === "approve" ? "Altinn godkjenn forespørsel" : "Altinn avvis forespørsel"
+  const url = `${BASE_URL}/request/received/${action}?party=${partyUuid}&id=${requestId}`
+  const t0 = Date.now()
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${altinnToken}`,
+        "Content-Type": "application/json",
+        ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
+      },
+      body: "[]",
+    })
+  } catch (err) {
+    traces?.push({ name: traceName, request: { method: "PUT", url }, response: { status: 0, body: String(err) }, durationMs: Date.now() - t0 })
+    throw err
+  }
+  const durationMs = Date.now() - t0
+  if (!response.ok) {
+    const errorBody = await response.text()
+    traces?.push({ name: traceName, request: { method: "PUT", url }, response: { status: response.status, body: errorBody }, durationMs })
+    throw new Error(`${traceName} feilet: ${response.status} ${errorBody}`)
+  }
+  traces?.push({ name: traceName, request: { method: "PUT", url }, response: { status: response.status, body: "OK" }, durationMs })
+}
+
+export async function approveRequest(
+  accessToken: string,
+  pid: string,
+  requestId: string,
+  traces?: TraceEntry[],
+): Promise<void> {
+  const altinnToken = await exchangeIdPortenToken(accessToken, traces)
+  const partyUuid = await getOwnPartyUuid(altinnToken, pid, traces)
+  await respondToRequest(altinnToken, partyUuid, requestId, "approve", process.env.ALTINN_SUBSCRIPTION_KEY, traces)
+}
+
+export async function rejectRequest(
+  accessToken: string,
+  pid: string,
+  requestId: string,
+  traces?: TraceEntry[],
+): Promise<void> {
+  const altinnToken = await exchangeIdPortenToken(accessToken, traces)
+  const partyUuid = await getOwnPartyUuid(altinnToken, pid, traces)
+  await respondToRequest(altinnToken, partyUuid, requestId, "reject", process.env.ALTINN_SUBSCRIPTION_KEY, traces)
+}
+
 export async function delegateAccessPackages(
   accessToken: string,
   pid: string,

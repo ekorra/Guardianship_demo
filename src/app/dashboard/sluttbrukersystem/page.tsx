@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth"
-import { getAllConnections } from "@/lib/altinnEnduser"
-import type { ReceivedConnection } from "@/lib/altinnEnduser"
+import { getAllConnections, getAllRequests } from "@/lib/altinnEnduser"
+import type { ReceivedConnection, AccessRequest } from "@/lib/altinnEnduser"
 import { getRoleMetaMap } from "@/lib/roles"
 import type { RoleMeta } from "@/lib/roles"
 import { getPackageMetaMap } from "@/lib/packageMeta"
@@ -10,6 +10,8 @@ import { DevPanel } from "@/components/DevPanel"
 import { RollerGruppe } from "@/components/RollerGruppe"
 import { TilgangspakkerGruppe } from "@/components/TilgangspakkerGruppe"
 import { DelegereSkjema } from "@/components/DelegereSkjema"
+import { BeOmFullmaktSkjema } from "@/components/BeOmFullmaktSkjema"
+import { MottattForesporsel } from "@/components/MottattForesporsel"
 import { redirect } from "next/navigation"
 
 const isDev = process.env.NODE_ENV === "development"
@@ -59,6 +61,47 @@ function ConnectionCard({
   )
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  Pending: "Ventende",
+  Approved: "Godkjent",
+  Rejected: "Avvist",
+  Withdrawn: "Trukket tilbake",
+  Draft: "Utkast",
+}
+
+function SendesForesporselRad({ request }: { request: AccessRequest }) {
+  const toName = request.to?.name ?? request.to?.id ?? "Ukjent"
+  const packageLabel = request.package?.name ?? request.package?.urn ?? "Ukjent pakke"
+  const status = STATUS_LABELS[request.status] ?? request.status
+  const statusColor =
+    request.status === "Approved" ? "bg-green-100 text-green-700" :
+    request.status === "Rejected" ? "bg-red-100 text-red-700" :
+    "bg-yellow-100 text-yellow-700"
+
+  return (
+    <li className="bg-gray-50 rounded-lg p-4 flex items-start justify-between gap-4">
+      <div>
+        <p className="text-sm font-semibold text-gray-900">{toName}</p>
+        <p className="text-xs text-gray-500 mt-0.5">{packageLabel}</p>
+        {request.created && (
+          <p className="text-xs text-gray-400 mt-0.5">{new Date(request.created).toLocaleDateString("nb-NO")}</p>
+        )}
+      </div>
+      <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${statusColor}`}>{status}</span>
+    </li>
+  )
+}
+
+function MottatteForesporselListe({ requests }: { requests: AccessRequest[] }) {
+  return (
+    <ul className="space-y-2">
+      {requests.map((r) => (
+        <MottattForesporsel key={r.id} request={r} />
+      ))}
+    </ul>
+  )
+}
+
 export default async function SluttbrukersystemPage() {
   const session = await auth()
   if (!session) redirect("/")
@@ -73,28 +116,42 @@ export default async function SluttbrukersystemPage() {
   let packageMetaMap = new Map<string, PackageMeta>()
   let receivedError: string | null = null
   let givenError: string | null = null
+  let sentRequests: AccessRequest[] = []
+  let receivedRequests: AccessRequest[] = []
+  let requestsError: string | null = null
 
   if (pid && accessToken) {
-    try {
-      const { received, given } = await getAllConnections(accessToken, pid, isDev ? traces : undefined)
-      receivedConnections = received
-      givenConnections = given
-      const allConnections = [...received, ...given]
-      const allRoleIds = allConnections.flatMap((c) => (c.roles ?? []).map((r) => r.id))
-      const allPackageIds = allConnections.flatMap((c) => (c.packages ?? []).map((p) => p.id))
-      await Promise.all([
-        allRoleIds.length > 0
-          ? getRoleMetaMap(allRoleIds, isDev ? traces : undefined).then((m) => { roleMetaMap = m })
-          : Promise.resolve(),
-        allPackageIds.length > 0
-          ? getPackageMetaMap(allPackageIds, isDev ? traces : undefined).then((m) => { packageMetaMap = m })
-          : Promise.resolve(),
-      ])
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Ukjent feil"
-      receivedError = msg
-      givenError = msg
-    }
+    await Promise.all([
+      getAllConnections(accessToken, pid, isDev ? traces : undefined)
+        .then(async ({ received, given }) => {
+          receivedConnections = received
+          givenConnections = given
+          const allConnections = [...received, ...given]
+          const allRoleIds = allConnections.flatMap((c) => (c.roles ?? []).map((r) => r.id))
+          const allPackageIds = allConnections.flatMap((c) => (c.packages ?? []).map((p) => p.id))
+          await Promise.all([
+            allRoleIds.length > 0
+              ? getRoleMetaMap(allRoleIds, isDev ? traces : undefined).then((m) => { roleMetaMap = m })
+              : Promise.resolve(),
+            allPackageIds.length > 0
+              ? getPackageMetaMap(allPackageIds, isDev ? traces : undefined).then((m) => { packageMetaMap = m })
+              : Promise.resolve(),
+          ])
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : "Ukjent feil"
+          receivedError = msg
+          givenError = msg
+        }),
+      getAllRequests(accessToken, pid, isDev ? traces : undefined)
+        .then(({ sent, received }) => {
+          sentRequests = sent
+          receivedRequests = received
+        })
+        .catch((err: unknown) => {
+          requestsError = err instanceof Error ? err.message : "Ukjent feil"
+        }),
+    ])
   }
 
   return (
@@ -131,8 +188,11 @@ export default async function SluttbrukersystemPage() {
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Deleger fullmakt</h2>
-            <DelegereSkjema />
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Fullmakt</h2>
+            <div className="flex gap-3">
+              <DelegereSkjema />
+              <BeOmFullmaktSkjema />
+            </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
@@ -162,7 +222,7 @@ export default async function SluttbrukersystemPage() {
             )}
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Avgitte fullmakter</h2>
 
             {givenError ? (
@@ -185,6 +245,32 @@ export default async function SluttbrukersystemPage() {
                     <ConnectionCard key={conn.party.id} conn={conn} roleEntries={roleEntries} packageEntries={packageEntries} canDelete />
                   )
                 })}
+              </ul>
+            )}
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Mottatte forespørsler</h2>
+            {requestsError ? (
+              <p className="text-sm text-red-600">Kunne ikke hente forespørsler: {requestsError}</p>
+            ) : receivedRequests.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">Ingen mottatte forespørsler.</p>
+            ) : (
+              <MottatteForesporselListe requests={receivedRequests} />
+            )}
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Sendte forespørsler</h2>
+            {requestsError ? (
+              <p className="text-sm text-red-600">Kunne ikke hente forespørsler: {requestsError}</p>
+            ) : sentRequests.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">Ingen sendte forespørsler.</p>
+            ) : (
+              <ul className="space-y-2">
+                {sentRequests.map((r) => (
+                  <SendesForesporselRad key={r.id} request={r} />
+                ))}
               </ul>
             )}
           </div>
