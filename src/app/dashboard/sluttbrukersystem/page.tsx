@@ -69,9 +69,14 @@ const STATUS_LABELS: Record<string, string> = {
   Draft: "Utkast",
 }
 
-function SendesForesporselRad({ request }: { request: AccessRequest }) {
+function resolvePackageName(request: AccessRequest, metaMap: Map<string, PackageMeta>): string {
+  const metaName = request.package?.id ? metaMap.get(request.package.id)?.name : undefined
+  return metaName ?? request.package?.name ?? request.package?.urn ?? "Ukjent pakke"
+}
+
+function SendesForesporselRad({ request, packageMetaMap }: { request: AccessRequest; packageMetaMap: Map<string, PackageMeta> }) {
   const toName = request.to?.name ?? request.to?.id ?? "Ukjent"
-  const packageLabel = request.package?.name ?? request.package?.urn ?? "Ukjent pakke"
+  const packageLabel = resolvePackageName(request, packageMetaMap)
   const status = STATUS_LABELS[request.status] ?? request.status
   const statusColor =
     request.status === "Approved" ? "bg-green-100 text-green-700" :
@@ -92,12 +97,15 @@ function SendesForesporselRad({ request }: { request: AccessRequest }) {
   )
 }
 
-function MottatteForesporselListe({ requests }: { requests: AccessRequest[] }) {
+function MottatteForesporselListe({ requests, packageMetaMap }: { requests: AccessRequest[]; packageMetaMap: Map<string, PackageMeta> }) {
   return (
     <ul className="space-y-2">
-      {requests.map((r) => (
-        <MottattForesporsel key={r.id} request={r} />
-      ))}
+      {requests.map((r) => {
+        const enriched = r.package?.id
+          ? { ...r, package: { ...r.package, name: resolvePackageName(r, packageMetaMap) } }
+          : r
+        return <MottattForesporsel key={r.id} request={enriched} />
+      })}
     </ul>
   )
 }
@@ -121,36 +129,42 @@ export default async function SluttbrukersystemPage() {
   let requestsError: string | null = null
 
   if (pid && accessToken) {
+    const [connectionsResult, requestsResult] = await Promise.allSettled([
+      getAllConnections(accessToken, pid, isDev ? traces : undefined),
+      getAllRequests(accessToken, pid, isDev ? traces : undefined),
+    ])
+
+    if (connectionsResult.status === "fulfilled") {
+      receivedConnections = connectionsResult.value.received
+      givenConnections = connectionsResult.value.given
+    } else {
+      const msg = connectionsResult.reason instanceof Error ? connectionsResult.reason.message : "Ukjent feil"
+      receivedError = msg
+      givenError = msg
+    }
+
+    if (requestsResult.status === "fulfilled") {
+      sentRequests = requestsResult.value.sent
+      receivedRequests = requestsResult.value.received
+    } else {
+      requestsError = requestsResult.reason instanceof Error ? requestsResult.reason.message : "Ukjent feil"
+    }
+
+    const allConnections = [...receivedConnections, ...givenConnections]
+    const allRoleIds = allConnections.flatMap((c) => (c.roles ?? []).map((r) => r.id))
+    const connectionPackageIds = allConnections.flatMap((c) => (c.packages ?? []).map((p) => p.id))
+    const requestPackageIds = [...sentRequests, ...receivedRequests]
+      .map((r) => r.package?.id)
+      .filter((id): id is string => !!id)
+    const allPackageIds = [...connectionPackageIds, ...requestPackageIds]
+
     await Promise.all([
-      getAllConnections(accessToken, pid, isDev ? traces : undefined)
-        .then(async ({ received, given }) => {
-          receivedConnections = received
-          givenConnections = given
-          const allConnections = [...received, ...given]
-          const allRoleIds = allConnections.flatMap((c) => (c.roles ?? []).map((r) => r.id))
-          const allPackageIds = allConnections.flatMap((c) => (c.packages ?? []).map((p) => p.id))
-          await Promise.all([
-            allRoleIds.length > 0
-              ? getRoleMetaMap(allRoleIds, isDev ? traces : undefined).then((m) => { roleMetaMap = m })
-              : Promise.resolve(),
-            allPackageIds.length > 0
-              ? getPackageMetaMap(allPackageIds, isDev ? traces : undefined).then((m) => { packageMetaMap = m })
-              : Promise.resolve(),
-          ])
-        })
-        .catch((err: unknown) => {
-          const msg = err instanceof Error ? err.message : "Ukjent feil"
-          receivedError = msg
-          givenError = msg
-        }),
-      getAllRequests(accessToken, pid, isDev ? traces : undefined)
-        .then(({ sent, received }) => {
-          sentRequests = sent
-          receivedRequests = received
-        })
-        .catch((err: unknown) => {
-          requestsError = err instanceof Error ? err.message : "Ukjent feil"
-        }),
+      allRoleIds.length > 0
+        ? getRoleMetaMap(allRoleIds, isDev ? traces : undefined).then((m) => { roleMetaMap = m })
+        : Promise.resolve(),
+      allPackageIds.length > 0
+        ? getPackageMetaMap(allPackageIds, isDev ? traces : undefined).then((m) => { packageMetaMap = m })
+        : Promise.resolve(),
     ])
   }
 
@@ -256,7 +270,7 @@ export default async function SluttbrukersystemPage() {
             ) : receivedRequests.length === 0 ? (
               <p className="text-sm text-gray-400 italic">Ingen mottatte forespørsler.</p>
             ) : (
-              <MottatteForesporselListe requests={receivedRequests} />
+              <MottatteForesporselListe requests={receivedRequests} packageMetaMap={packageMetaMap} />
             )}
           </div>
 
@@ -269,7 +283,7 @@ export default async function SluttbrukersystemPage() {
             ) : (
               <ul className="space-y-2">
                 {sentRequests.map((r) => (
-                  <SendesForesporselRad key={r.id} request={r} />
+                  <SendesForesporselRad key={r.id} request={r} packageMetaMap={packageMetaMap} />
                 ))}
               </ul>
             )}
