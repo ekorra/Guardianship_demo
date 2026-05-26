@@ -89,6 +89,7 @@ if (data.traces?.length) {
 ## Kjente tekniske fallgruver
 
 ### ID-porten
+- **To klienter**: `idporten` (flyt 3, alle enduser-scopes) og `idporten-tjenesteeier` (flyt 2, kun `openid profile`). Begge bruker samme `IDPORTEN_PRIVATE_KEY_JWK`. `idporten-tjenesteeier` aktiveres kun når `IDPORTEN_TJENESTEEIER_CLIENT_ID` er satt. `token.provider` lagres i JWT for å velge riktig `client_id` ved token-refresh.
 - **Primær auth-metode**: `private_key_jwt` via `IDPORTEN_PRIVATE_KEY_JWK` — fallback til `client_secret_post` hvis env-variabelen mangler
 - **oauth4webapi aud-bug**: `oauth4webapi` sender `aud` som array `[issuer, token_endpoint]` for `private_key_jwt` — ID-porten krever string. Løst med `[customFetch]` fra `@auth/core` som re-signerer JWT med korrekt `aud`
 - **jose.importJWK** returnerer `KeyObject`, ikke `CryptoKey` — bruk `crypto.subtle.importKey` i stedet
@@ -141,9 +142,10 @@ if (data.traces?.length) {
 ## Miljøvariabler (.env.local)
 - `AUTH_SECRET` — tilfeldig streng
 - `AUTH_URL` — app-URL (lokalt: `http://localhost:3000`, prod: `https://guardianship-demo.vercel.app`)
-- `IDPORTEN_CLIENT_ID` — fra selvbetjening.test.digdir.no
+- `IDPORTEN_CLIENT_ID` — flyt 3 (sluttbrukersystem) — har alle enduser-scopes
 - `IDPORTEN_CLIENT_SECRET` — kun nødvendig uten private_key_jwt
-- `IDPORTEN_PRIVATE_KEY_JWK` — RSA privatnøkkel som JWK-JSON (inkluderer `kid`)
+- `IDPORTEN_PRIVATE_KEY_JWK` — RSA privatnøkkel som JWK-JSON (inkluderer `kid`); deles av begge ID-porten-klienter
+- `IDPORTEN_TJENESTEEIER_CLIENT_ID` — flyt 2 (tjenesteeier) — kun `openid profile`; samme JWK registreres i Digdir selvbetjening
 - `MASKINPORTEN_CLIENT_ID` — fra selvbetjening.test.digdir.no
 - `MASKINPORTEN_PRIVATE_KEY_JWK` — RSA privatnøkkel som JWK-JSON (inkluderer `kid`)
 - `ALTINN_SUBSCRIPTION_KEY` — API-nøkkel for Altinn AM (valgfri, men anbefalt)

@@ -47,7 +47,7 @@ export default async function Home() {
             <form
               action={async () => {
                 "use server"
-                await signIn("idporten", { redirectTo: "/dashboard" })
+                await signIn("idporten-tjenesteeier", { redirectTo: "/dashboard" })
               }}
             >
               <button
