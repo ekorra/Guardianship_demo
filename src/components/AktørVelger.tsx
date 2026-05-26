@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { VergemålDetaljer } from "@/components/VergemålDetaljer"
+import { TjenesteeierDelegereSkjema } from "@/components/TjenesteeierDelegereSkjema"
 import type { PakkeGruppe } from "@/lib/altinn"
 
 export interface AktørData {
@@ -40,6 +41,13 @@ export function AktørVelger({ aktører, loggedInPid }: { aktører: AktørData[]
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="mb-4">
+        <TjenesteeierDelegereSkjema
+          selectedAktørPid={selected?.personId ?? ""}
+          selectedAktørName={selected?.name ?? ""}
+        />
       </div>
 
       {hasFullmakter ? (

@@ -18,6 +18,7 @@ export interface DelegerbaPakke {
 }
 
 export const DELEGERBARE_PAKKER: DelegerbaPakke[] = [
+  { id: "urn:altinn:accesspackage:innbygger-skatteforhold-privatpersoner", label: "Skatteforhold privatpersoner" },
   { id: "urn:altinn:accesspackage:innbygger-stotte-tilskudd", label: "Støtte og tilskudd" },
 ]
 
