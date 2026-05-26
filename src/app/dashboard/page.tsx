@@ -48,7 +48,10 @@ export default async function DashboardPage() {
     <main className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-lg font-semibold text-gray-800">Vergeportalen</h1>
+          <div className="flex items-center gap-3">
+            <a href="/" className="text-sm text-gray-400 hover:text-gray-600">← Tilbake</a>
+            <h1 className="text-lg font-semibold text-gray-800">Tjenesteeier</h1>
+          </div>
           <a
             href="/api/logout"
             className="text-sm text-gray-500 hover:text-gray-700"

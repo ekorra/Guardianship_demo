@@ -129,6 +129,13 @@ export async function getAuthorizedParties(
 
   if (!response.ok) {
     const error = await response.text()
+    traces?.push({
+      name: "Resourceowner: autoriserte parter",
+      group: "tjenesteeier",
+      request: { method: "POST", url: altinnUrl, body: requestBody },
+      response: { status: response.status, body: error },
+      durationMs: Date.now() - t0,
+    })
     throw new Error(
       `Altinn Authorized Parties feilet: ${response.status} ${error}`
     )
@@ -137,7 +144,8 @@ export async function getAuthorizedParties(
   const data = (await response.json()) as AuthorizedParty[]
 
   traces?.push({
-    name: "Altinn vergemål",
+    name: "Resourceowner: autoriserte parter",
+    group: "tjenesteeier",
     request: { method: "POST", url: altinnUrl, body: requestBody },
     response: { status: response.status, body: data },
     durationMs: Date.now() - t0,
