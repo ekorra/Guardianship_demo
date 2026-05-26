@@ -69,7 +69,11 @@ export async function delegateServiceownerPackage(
   const token = await getMaskinportenToken(SCOPE_DELEGATE, traces)
 
   const url = `${BASE_URL}/serviceowner/connections/accesspackages`
-  const requestBody = { from: fromPid, to: toPid, package: packageUrn }
+  const requestBody = {
+    from: `urn:altinn:person:identifier-no:${fromPid}`,
+    to: `urn:altinn:person:identifier-no:${toPid}`,
+    packageUrn,
+  }
   const t0 = Date.now()
 
   const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY

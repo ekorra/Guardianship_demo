@@ -111,6 +111,7 @@ if (data.traces?.length) {
 - Token caches in-memory per scope med 10 sekunders margin før utløp
 - Test-endepunkt: `https://test.maskinporten.no/token` / Audience: `https://test.maskinporten.no/`
 - **Scopes i bruk**: `altinn:accessmanagement/authorizedparties.resourceowner` (lese parter, flyt 2), `altinn:accessmanagement/authorizedparties.serviceowner` (serviceowner-parter), `altinn:serviceowner/delegations:accesspackage.write` (delegere tilgangspakker via serviceowner-API)
+- **POST /serviceowner/connections/accesspackages** body: `{ from: "urn:altinn:person:identifier-no:{pid}", to: "urn:altinn:person:identifier-no:{pid}", packageUrn: "urn:altinn:accesspackage:..." }` — from/to MÅ være URN-format, ikke bare PID
 
 ### Altinn PDP (XACML JSON)
 - Request MÅ wrappes i `{ Request: { AccessSubject, Action, Resource } }`
