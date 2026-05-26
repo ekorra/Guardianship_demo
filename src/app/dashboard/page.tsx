@@ -1,13 +1,12 @@
 import { auth } from "@/lib/auth"
 import { getAuthorizedParties, isVergePart, isInnbyggerPart, getVergemålGruppert, getInnbyggerGruppert } from "@/lib/altinn"
-import type { AuthorizedParty } from "@/lib/altinn"
 import { getAccessPackageMetadata } from "@/lib/accesspackages"
-import type { AccessPackageMeta } from "@/lib/accesspackages"
 import type { TraceEntry } from "@/lib/trace"
 import { DevPanel } from "@/components/DevPanel"
-import { VergemålDetaljer } from "@/components/VergemålDetaljer"
 import { TilgangKnapp } from "@/components/TilgangKnapp"
 import { ResourceVelger } from "@/components/ResourceVelger"
+import { AktørVelger } from "@/components/AktørVelger"
+import type { AktørData } from "@/components/AktørVelger"
 import { redirect } from "next/navigation"
 
 const isDev = process.env.NODE_ENV === "development"
@@ -20,9 +19,8 @@ export default async function DashboardPage() {
   }
 
   const pid = session.user?.pid
-  let parties: AuthorizedParty[] = []
+  let aktørData: AktørData[] = []
   let altinnError: string | null = null
-  let metaMap: Map<string, AccessPackageMeta> = new Map()
   const traces: TraceEntry[] = []
 
   if (pid) {
@@ -30,107 +28,80 @@ export default async function DashboardPage() {
       getAuthorizedParties(pid, isDev ? traces : undefined),
       getAccessPackageMetadata(),
     ])
-    if (partiesResult.status === "fulfilled") {
-      parties = partiesResult.value
-    } else {
+
+    if (partiesResult.status === "fulfilled" && metaResult.status === "fulfilled") {
+      const parties = partiesResult.value
+      const metaMap = metaResult.value
+
+      // Innlogget bruker først, deretter øvrige parter
+      const sorted = [
+        ...parties.filter((p) => p.personId === pid),
+        ...parties.filter((p) => p.personId !== pid),
+      ]
+
+      aktørData = sorted.map((party) => ({
+        partyUuid: party.partyUuid,
+        name: party.name,
+        personId: party.personId,
+        vergemålGrupper: isVergePart(party) ? getVergemålGruppert(party, metaMap) : [],
+        innbyggerGrupper: isInnbyggerPart(party) ? getInnbyggerGruppert(party, metaMap) : [],
+      }))
+    } else if (partiesResult.status === "rejected") {
       altinnError =
         partiesResult.reason instanceof Error
           ? partiesResult.reason.message
           : "Ukjent feil ved henting fra Altinn"
     }
-    if (metaResult.status === "fulfilled") {
-      metaMap = metaResult.value
-    }
   }
 
   return (
     <>
-    <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-lg font-semibold text-gray-800">Tjenesteeier</h1>
-          <a
-            href="/api/logout"
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            Logg ut
-          </a>
-        </div>
-      </nav>
-
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6" data-testid="user-info">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Innlogget som</p>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-              <span className="text-lg font-semibold text-blue-700">
-                {session.user?.name?.charAt(0) ?? "?"}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-base font-semibold text-gray-900 truncate">
-                {session.user?.name ?? <span className="italic text-gray-400 font-normal text-sm">ikke tilgjengelig</span>}
-              </p>
-              <p className="text-sm text-gray-400 font-mono mt-0.5">{pid ?? "—"}</p>
-            </div>
-            {pid && <TilgangKnapp resourcePid={pid} />}
+      <main className="min-h-screen bg-gray-50">
+        <nav className="bg-white shadow-sm">
+          <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 className="text-lg font-semibold text-gray-800">Tjenesteeier</h1>
+            <a href="/api/logout" className="text-sm text-gray-500 hover:text-gray-700">
+              Logg ut
+            </a>
           </div>
-        </div>
+        </nav>
 
-        <ResourceVelger />
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6" data-testid="user-info">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Innlogget som</p>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                <span className="text-lg font-semibold text-blue-700">
+                  {session.user?.name?.charAt(0) ?? "?"}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-base font-semibold text-gray-900 truncate">
+                  {session.user?.name ?? <span className="italic text-gray-400 font-normal text-sm">ikke tilgjengelig</span>}
+                </p>
+                <p className="text-sm text-gray-400 font-mono mt-0.5">{pid ?? "—"}</p>
+              </div>
+              {pid && <TilgangKnapp resourcePid={pid} />}
+            </div>
+          </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
-            Fullmakter
-          </h2>
+          <ResourceVelger />
 
           {altinnError ? (
-            <p className="text-sm text-red-600">
-              Kunne ikke hente data fra Altinn: {altinnError}
-            </p>
-          ) : parties.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">
-              Ingen registrerte vergemål funnet.
-            </p>
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <p className="text-sm text-red-600">Kunne ikke hente data fra Altinn: {altinnError}</p>
+            </div>
+          ) : aktørData.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <p className="text-sm text-gray-400 italic">Ingen aktører funnet.</p>
+            </div>
           ) : (
-            <ul className="space-y-3">
-              {parties.filter((party) => party.personId !== pid).map((party) => (
-                <li key={party.partyUuid} className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center shrink-0">
-                      <span className="text-sm font-semibold text-gray-500">
-                        {party.name.charAt(0)}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
-                        {party.name}
-                      </p>
-                      <p className="text-xs text-gray-400 font-mono mt-0.5">
-                        {party.type === "Person"
-                          ? party.personId ?? "—"
-                          : party.organizationNumber ?? "—"}
-                      </p>
-                    </div>
-                    {party.type === "Person" && party.personId && (
-                      <TilgangKnapp resourcePid={party.personId} />
-                    )}
-                  </div>
-                  {isVergePart(party) && (
-                    <VergemålDetaljer grupper={getVergemålGruppert(party, metaMap)} tittel="Vergemålsfullmakter" variant="vergemål" />
-                  )}
-                  {isInnbyggerPart(party) && (
-                    <VergemålDetaljer grupper={getInnbyggerGruppert(party, metaMap)} tittel="Innbyggerfullmakter" variant="innbygger" />
-                  )}
-                </li>
-              ))}
-            </ul>
+            <AktørVelger aktører={aktørData} loggedInPid={pid ?? ""} />
           )}
         </div>
-      </div>
-    </main>
+      </main>
 
-    {isDev && <DevPanel traces={traces} />}
-  </>
+      {isDev && <DevPanel traces={traces} />}
+    </>
   )
 }

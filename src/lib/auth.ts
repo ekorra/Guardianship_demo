@@ -1,5 +1,5 @@
 import NextAuth from "next-auth"
-import type { NextAuthConfig, Provider } from "next-auth"
+import type { NextAuthConfig } from "next-auth"
 import type { PrivateKey } from "oauth4webapi"
 import { customFetch } from "@auth/core"
 
@@ -112,7 +112,8 @@ async function refreshIdPortenToken(
   return res.json() as Promise<{ access_token: string; refresh_token?: string; expires_in: number }>
 }
 
-function buildIdportenProvider(opts: { id: string; clientId: string | undefined; scope: string; kid?: string }): Provider {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildIdportenProvider(opts: { id: string; clientId: string | undefined; scope: string; kid?: string }): any {
   const { id, clientId, scope, kid } = opts
   return {
     id,
@@ -157,7 +158,7 @@ function buildIdportenProvider(opts: { id: string; clientId: string | undefined;
         acr_values: "idporten-loa-substantial",
       },
     },
-    profile(profile) {
+    profile(profile: Record<string, unknown>) {
       const givenName = profile.given_name as string | undefined
       const familyName = profile.family_name as string | undefined
       const fullName =
@@ -180,7 +181,7 @@ const ENDUSER_SCOPE =
 
 const TJENESTEEIER_SCOPE = "openid profile"
 
-const providers: Provider[] = [
+const providers: NextAuthConfig["providers"] = [
   buildIdportenProvider({
     id: "idporten",
     clientId: process.env.IDPORTEN_CLIENT_ID,
