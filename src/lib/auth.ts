@@ -39,12 +39,22 @@ async function fixClientAssertionAud(jwt: string, signingKey: CryptoKey): Promis
   return `${signingInput}.${Buffer.from(rawSignature).toString("base64url")}`
 }
 
+async function rewriteKid(jwt: string, kid: string, signingKey: CryptoKey): Promise<string> {
+  const parts = jwt.split(".")
+  const header = JSON.parse(Buffer.from(parts[0], "base64url").toString()) as Record<string, unknown>
+  header.kid = kid
+  const newHeader = Buffer.from(JSON.stringify(header)).toString("base64url")
+  const signingInput = `${newHeader}.${parts[1]}`
+  const rawSignature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", signingKey, Buffer.from(signingInput))
+  return `${signingInput}.${Buffer.from(rawSignature).toString("base64url")}`
+}
+
 const TOKEN_ENDPOINT = "https://test.idporten.no/token"
 const REFRESH_BUFFER_SECONDS = 30
 
-async function createClientAssertion(clientId: string): Promise<string> {
+async function createClientAssertion(clientId: string, kid?: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000)
-  const header = { alg: "RS256", kid: idportenPrivateKey!.kid, typ: "JWT" }
+  const header = { alg: "RS256", kid: kid ?? idportenPrivateKey!.kid, typ: "JWT" }
   const payload = {
     iss: clientId,
     sub: clientId,
@@ -67,9 +77,17 @@ function resolveClientId(provider: string): string {
   return process.env.IDPORTEN_CLIENT_ID!
 }
 
+function resolveKid(provider: string): string | undefined {
+  if (provider === "idporten-tjenesteeier") {
+    return process.env.IDPORTEN_TJENESTEEIER_KID ?? idportenJwk?.kid
+  }
+  return idportenJwk?.kid
+}
+
 async function refreshIdPortenToken(
   refreshToken: string,
   clientId: string,
+  kid?: string,
 ): Promise<{ access_token: string; refresh_token?: string; expires_in: number } | null> {
   const params = new URLSearchParams({
     grant_type: "refresh_token",
@@ -78,7 +96,7 @@ async function refreshIdPortenToken(
   })
   if (idportenPrivateKey) {
     params.set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
-    params.set("client_assertion", await createClientAssertion(clientId))
+    params.set("client_assertion", await createClientAssertion(clientId, kid))
   } else if (process.env.IDPORTEN_CLIENT_SECRET) {
     params.set("client_secret", process.env.IDPORTEN_CLIENT_SECRET)
   }
@@ -94,8 +112,8 @@ async function refreshIdPortenToken(
   return res.json() as Promise<{ access_token: string; refresh_token?: string; expires_in: number }>
 }
 
-function buildIdportenProvider(opts: { id: string; clientId: string | undefined; scope: string }): Provider {
-  const { id, clientId, scope } = opts
+function buildIdportenProvider(opts: { id: string; clientId: string | undefined; scope: string; kid?: string }): Provider {
+  const { id, clientId, scope, kid } = opts
   return {
     id,
     name: id === "idporten" ? "ID-porten" : "ID-porten Tjenesteeier",
@@ -120,10 +138,12 @@ function buildIdportenProvider(opts: { id: string; clientId: string | undefined;
             if (init?.body instanceof URLSearchParams) {
               const assertion = init.body.get("client_assertion")
               if (assertion) {
-                init.body.set(
-                  "client_assertion",
-                  await fixClientAssertionAud(assertion, idportenPrivateKey.key),
-                )
+                // Re-signer med riktig kid hvis den ble overskrevet av oauth4webapi
+                let fixed = await fixClientAssertionAud(assertion, idportenPrivateKey.key)
+                if (kid && kid !== idportenJwk?.kid) {
+                  fixed = await rewriteKid(fixed, kid, idportenPrivateKey.key)
+                }
+                init.body.set("client_assertion", fixed)
               }
             }
             return fetch(url, init)
@@ -174,6 +194,7 @@ if (process.env.IDPORTEN_TJENESTEEIER_CLIENT_ID) {
       id: "idporten-tjenesteeier",
       clientId: process.env.IDPORTEN_TJENESTEEIER_CLIENT_ID,
       scope: TJENESTEEIER_SCOPE,
+      kid: process.env.IDPORTEN_TJENESTEEIER_KID ?? idportenJwk?.kid,
     }),
   )
 }
@@ -199,8 +220,10 @@ export const config: NextAuthConfig = {
       }
       const refreshToken = token.refreshToken as string | undefined
       if (!refreshToken) return token
-      const clientId = resolveClientId((token.provider as string | undefined) ?? "idporten")
-      const refreshed = await refreshIdPortenToken(refreshToken, clientId)
+      const provider = (token.provider as string | undefined) ?? "idporten"
+      const clientId = resolveClientId(provider)
+      const kid = resolveKid(provider)
+      const refreshed = await refreshIdPortenToken(refreshToken, clientId, kid)
       if (!refreshed) return token
       token.accessToken = refreshed.access_token
       token.refreshToken = refreshed.refresh_token ?? refreshToken

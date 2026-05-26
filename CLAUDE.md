@@ -146,6 +146,7 @@ if (data.traces?.length) {
 - `IDPORTEN_CLIENT_SECRET` — kun nødvendig uten private_key_jwt
 - `IDPORTEN_PRIVATE_KEY_JWK` — RSA privatnøkkel som JWK-JSON (inkluderer `kid`); deles av begge ID-porten-klienter
 - `IDPORTEN_TJENESTEEIER_CLIENT_ID` — flyt 2 (tjenesteeier) — kun `openid profile`; samme JWK registreres i Digdir selvbetjening
+- `IDPORTEN_TJENESTEEIER_KID` — `kid` som Digdir selvbetjening tildelte ved opplasting av nøkkel for tjenesteeier-klienten; kan avvike fra `kid` i `IDPORTEN_PRIVATE_KEY_JWK`
 - `MASKINPORTEN_CLIENT_ID` — fra selvbetjening.test.digdir.no
 - `MASKINPORTEN_PRIVATE_KEY_JWK` — RSA privatnøkkel som JWK-JSON (inkluderer `kid`)
 - `ALTINN_SUBSCRIPTION_KEY` — API-nøkkel for Altinn AM (valgfri, men anbefalt)
