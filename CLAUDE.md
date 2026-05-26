@@ -110,6 +110,7 @@ if (data.traces?.length) {
 - Assertion er RS256-signert med privatnøkkel fra `MASKINPORTEN_PRIVATE_KEY_JWK` (JWK-format)
 - Token caches in-memory per scope med 10 sekunders margin før utløp
 - Test-endepunkt: `https://test.maskinporten.no/token` / Audience: `https://test.maskinporten.no/`
+- **Scopes i bruk**: `altinn:accessmanagement/authorizedparties.resourceowner` (lese parter, flyt 2), `altinn:accessmanagement/authorizedparties.serviceowner` (serviceowner-parter), `altinn:serviceowner/delegations:accesspackage.write` (delegere tilgangspakker via serviceowner-API)
 
 ### Altinn PDP (XACML JSON)
 - Request MÅ wrappes i `{ Request: { AccessSubject, Action, Resource } }`

@@ -2,8 +2,7 @@ import { getMaskinportenToken } from "./maskinporten"
 import type { TraceEntry } from "./trace"
 
 const SCOPE_READ = "altinn:accessmanagement/authorizedparties.serviceowner"
-// Delegerings-scope — kan trenge justering basert på Altinn-dokumentasjon
-const SCOPE_DELEGATE = "altinn:accessmanagement/serviceowner.accesspackages.write"
+const SCOPE_DELEGATE = "altinn:serviceowner/delegations:accesspackage.write"
 const BASE_URL = "https://platform.tt02.altinn.no/accessmanagement/api/v1"
 
 export interface ServiceownerParty {
