@@ -68,12 +68,8 @@ export async function delegateServiceownerPackage(
 ): Promise<void> {
   const token = await getMaskinportenToken(SCOPE_DELEGATE, traces)
 
-  const params = new URLSearchParams({
-    from: fromPid,
-    to: toPid,
-    package: packageUrn,
-  })
-  const url = `${BASE_URL}/serviceowner/connections/accesspackages?${params}`
+  const url = `${BASE_URL}/serviceowner/connections/accesspackages`
+  const requestBody = { from: fromPid, to: toPid, package: packageUrn }
   const t0 = Date.now()
 
   const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
@@ -81,8 +77,10 @@ export async function delegateServiceownerPackage(
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
       ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
     },
+    body: JSON.stringify(requestBody),
   })
 
   const durationMs = Date.now() - t0
@@ -92,7 +90,7 @@ export async function delegateServiceownerPackage(
     traces?.push({
       name: "Serviceowner: deleger tilgangspakke",
       group: "tjenesteeier",
-      request: { method: "POST", url },
+      request: { method: "POST", url, body: requestBody },
       response: { status: response.status, body },
       durationMs,
     })
