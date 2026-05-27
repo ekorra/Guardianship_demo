@@ -1,11 +1,11 @@
 ---
 id: TASK-33
 title: 'Tjenesteeier: deleger fullmakt'
-status: Done
+status: In Progress
 assignee:
   - '@ekorra'
 created_date: '2026-05-22 15:29'
-updated_date: '2026-05-26 13:38'
+updated_date: '2026-05-26 14:59'
 labels:
   - backend
   - frontend
@@ -43,6 +43,19 @@ Implementer delegering av fullmakt for tjenesteeier-flyt (flyt 2) via POST /serv
 4. TjenesteeierDelegereSkjema.tsx — Client Component seksjon 2.1 og 2.2
 5. AktørVelger.tsx — integrer skjema med valgt aktørs personId
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## Blokkert — avventer API-oppdatering
+
+APIet har hvitelisting på tjenesteeiere og tilgangspakker. Vi er ikke hvitelistet ennå.
+
+**Når vi tar opp igjen:**
+- Bytt standardpakke til `urn:altinn:accesspackage:innbygger-stotte-tilskudd` (støtte og tilskudd)
+- Verifiser at tjenesteeier er hvitelistet i Altinn tt02 for denne pakken
+- Test delegering på nytt
+<!-- SECTION:NOTES:END -->
 
 ## Final Summary
 

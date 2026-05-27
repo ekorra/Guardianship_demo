@@ -17,20 +17,30 @@ export default async function Home() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          {/* Alternativ 1 — disabled */}
-          <div className="relative bg-white rounded-lg shadow-sm border border-gray-200 p-6 opacity-60 cursor-not-allowed select-none">
-            <span className="absolute top-3 right-3 text-xs font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-              Kommer snart
-            </span>
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-              <span className="text-lg font-bold text-gray-400">1</span>
+          {/* Alternativ 1 — aktivt */}
+          <div className="bg-white rounded-lg shadow-sm border-2 border-purple-500 p-6 flex flex-col">
+            <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mb-4">
+              <span className="text-lg font-bold text-purple-700">1</span>
             </div>
-            <h2 className="text-sm font-semibold text-gray-700 mb-2">
+            <h2 className="text-sm font-semibold text-gray-800 mb-2">
               Fullmaktspålogging via ID-porten
             </h2>
-            <p className="text-xs text-gray-400">
-              Innlogget bruker administrerer fullmakter direkte via ID-porten uten tjenesteeier-API.
+            <p className="text-xs text-gray-500 mb-6 flex-1">
+              Bruker logger inn og velger fullmaktsgiver. Fullmaktsinformasjon returneres direkte i tokenet.
             </p>
+            <form
+              action={async () => {
+                "use server"
+                await signIn("idporten-fullmakt", { redirectTo: "/dashboard/fullmakt" })
+              }}
+            >
+              <button
+                type="submit"
+                className="w-full bg-purple-700 hover:bg-purple-800 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors"
+              >
+                Logg inn med ID-porten
+              </button>
+            </form>
           </div>
 
           {/* Alternativ 2 — aktivt */}

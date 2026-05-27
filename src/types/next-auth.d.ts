@@ -9,5 +9,6 @@ declare module "next-auth" {
     } & DefaultSession["user"]
     idToken?: string
     accessToken?: string
+    authorizationDetails?: unknown
   }
 }

@@ -2,6 +2,7 @@ import NextAuth from "next-auth"
 import type { NextAuthConfig } from "next-auth"
 import type { PrivateKey } from "oauth4webapi"
 import { customFetch } from "@auth/core"
+import { FULLMAKT_PERMISSION_ROLES } from "./fullmakt"
 
 const idportenJwkEnv = process.env.IDPORTEN_PRIVATE_KEY_JWK
 const idportenJwk = idportenJwkEnv
@@ -113,8 +114,8 @@ async function refreshIdPortenToken(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildIdportenProvider(opts: { id: string; clientId: string | undefined; scope: string; kid?: string }): any {
-  const { id, clientId, scope, kid } = opts
+function buildIdportenProvider(opts: { id: string; clientId: string | undefined; scope: string; kid?: string; extraAuthParams?: Record<string, string> }): any {
+  const { id, clientId, scope, kid, extraAuthParams } = opts
   return {
     id,
     name: id === "idporten" ? "ID-porten" : "ID-porten Tjenesteeier",
@@ -156,6 +157,7 @@ function buildIdportenProvider(opts: { id: string; clientId: string | undefined;
         scope,
         ui_locales: "nb",
         acr_values: "idporten-loa-substantial",
+        ...extraAuthParams,
       },
     },
     profile(profile: Record<string, unknown>) {
@@ -181,6 +183,10 @@ const ENDUSER_SCOPE =
 
 const TJENESTEEIER_SCOPE = "openid profile"
 
+const FULLMAKT_AUTHORIZATION_DETAILS = JSON.stringify([
+  { type: "idporten:fullmakt", permission_roles: [...FULLMAKT_PERMISSION_ROLES] },
+])
+
 const providers: NextAuthConfig["providers"] = [
   buildIdportenProvider({
     id: "idporten",
@@ -200,6 +206,15 @@ if (process.env.IDPORTEN_TJENESTEEIER_CLIENT_ID) {
   )
 }
 
+providers.push(
+  buildIdportenProvider({
+    id: "idporten-fullmakt",
+    clientId: process.env.IDPORTEN_CLIENT_ID,
+    scope: "openid profile",
+    extraAuthParams: { authorization_details: FULLMAKT_AUTHORIZATION_DETAILS },
+  }),
+)
+
 export const config: NextAuthConfig = {
   providers,
   callbacks: {
@@ -213,6 +228,7 @@ export const config: NextAuthConfig = {
         token.accessToken = account.access_token
         token.refreshToken = account.refresh_token
         token.expiresAt = account.expires_at
+        if (account.authorization_details) token.authorizationDetails = account.authorization_details
         return token
       }
       const expiresAt = token.expiresAt as number | undefined
@@ -237,6 +253,7 @@ export const config: NextAuthConfig = {
       if (token.family_name) session.user.family_name = token.family_name as string
       if (token.idToken) session.idToken = token.idToken as string
       if (token.accessToken) session.accessToken = token.accessToken as string
+      if (token.authorizationDetails) session.authorizationDetails = token.authorizationDetails
       return session
     },
   },
