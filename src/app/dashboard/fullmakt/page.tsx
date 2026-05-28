@@ -2,40 +2,46 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import {
   extractFullmaktClaims,
-  getGrantedRoles,
-  PERMISSION_ROLE_LABELS,
+  getGrantedPermissions,
   FULLMAKT_PERMISSION_ROLES,
 } from "@/lib/fullmakt"
 import type { PermissionRole } from "@/lib/fullmakt"
+import { getGuardianshipMeta } from "@/lib/guardianships"
+import { FullmaktTokenTrace } from "./FullmaktTokenTrace"
+import { DevPanel } from "@/components/DevPanel"
 
-const ROLE_ACTIONS: Record<PermissionRole, { label: string; description: string }> = {
-  bostoette: {
-    label: "Søk om bostøtte",
-    description: "Søk om bostøtte på vegne av fullmaktsgiver",
-  },
-  arbeid: {
-    label: "Se arbeidsforhold",
-    description: "Se og meld fra om arbeidsforhold på vegne av fullmaktsgiver",
-  },
+// Fallback-labels for ukjente roller uten YAML-metadata
+const ROLE_FALLBACK: Record<PermissionRole, string> = {
+  bostoette: "Bostøtte",
+  arbeid: "Arbeid og sysselsetting",
+}
+
+function decodeJwtPayload(token: string | undefined): unknown {
+  if (!token) return null
+  try {
+    return JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString())
+  } catch {
+    return null
+  }
 }
 
 export default async function FullmaktPage() {
   const session = await auth()
   if (!session) redirect("/")
 
+  const isDev = process.env.NODE_ENV === "development"
   const pid = session.user?.pid
   const claims = extractFullmaktClaims(session.authorizationDetails)
-  const grantedRoles = getGrantedRoles(claims)
+  const grantedPermissions = getGrantedPermissions(claims)
+  const grantedRoles = new Set(grantedPermissions.map((p) => p.role))
   const authorizer = claims[0]?.authorizer
+  const idTokenPayload = decodeJwtPayload(session.idToken)
 
   return (
     <main className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <a href="/" className="text-sm text-gray-400 hover:text-gray-600">← Tilbake</a>
-            <h1 className="text-lg font-semibold text-gray-800">Fullmaktspålogging</h1>
-          </div>
+          <h1 className="text-lg font-semibold text-gray-800">Fullmaktspålogging</h1>
           <a href="/api/logout" className="text-sm text-gray-500 hover:text-gray-700">Logg ut</a>
         </div>
       </nav>
@@ -76,36 +82,40 @@ export default async function FullmaktPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Tilgjengelige handlinger</h2>
-          {grantedRoles.length === 0 ? (
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-gray-800">Rettigheter på vegne av</h2>
+            {authorizer && (
+              <p className="text-sm text-gray-500 mt-0.5">{authorizer.name ?? "ukjent"}</p>
+            )}
+          </div>
+          {grantedRoles.size === 0 ? (
             <p className="text-sm text-gray-400 italic">
               Ingen fullmakter ble tildelt i denne sesjonen. Kontroller at fullmaktsgiver har gitt deg de nødvendige rollene.
             </p>
           ) : (
             <ul className="space-y-3">
-              {FULLMAKT_PERMISSION_ROLES.map((role) => {
-                const granted = grantedRoles.includes(role)
-                const action = ROLE_ACTIONS[role]
+              {grantedPermissions.map((permission) => {
+                const meta = getGuardianshipMeta(permission.owner, permission.role)
+                const title = meta?.title ?? ROLE_FALLBACK[permission.role as PermissionRole] ?? permission.role
+                const description = meta?.description
                 return (
                   <li
-                    key={role}
-                    className={`flex items-center justify-between rounded-lg border p-4 ${
-                      granted ? "border-purple-200 bg-purple-50" : "border-gray-200 bg-gray-50 opacity-50"
-                    }`}
+                    key={`${permission.owner}:${permission.role}`}
+                    className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 p-4"
                   >
                     <div>
-                      <p className={`text-sm font-semibold ${granted ? "text-gray-900" : "text-gray-400"}`}>
-                        {action.label}
+                      <p className="text-sm font-semibold text-gray-900" title={description}>
+                        {title}
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5">{action.description}</p>
-                      <p className="text-xs text-gray-300 font-mono mt-1">{role}</p>
+                      {description && (
+                        <p className="text-xs text-gray-500 mt-0.5 max-w-sm">{description}</p>
+                      )}
+                      <p className="text-xs text-gray-300 font-mono mt-1">
+                        {permission.owner} / {permission.role}
+                      </p>
                     </div>
-                    <span
-                      className={`text-xs font-medium px-2.5 py-0.5 rounded-full shrink-0 ml-4 ${
-                        granted ? "bg-purple-100 text-purple-700" : "bg-gray-200 text-gray-400"
-                      }`}
-                    >
-                      {granted ? PERMISSION_ROLE_LABELS[role] : "Ikke tildelt"}
+                    <span className="text-xs font-medium px-2.5 py-0.5 rounded-full shrink-0 ml-4 bg-purple-100 text-purple-700">
+                      Tildelt
                     </span>
                   </li>
                 )
@@ -113,6 +123,8 @@ export default async function FullmaktPage() {
             </ul>
           )}
         </div>
+
+        <FullmaktTokenTrace authorizationDetails={session.authorizationDetails} idTokenPayload={idTokenPayload} />
 
         {session.authorizationDetails != null && (
           <details className="bg-white rounded-lg shadow-sm p-6">
@@ -125,6 +137,7 @@ export default async function FullmaktPage() {
           </details>
         )}
       </div>
+      {isDev && <DevPanel traces={[]} />}
     </main>
   )
 }

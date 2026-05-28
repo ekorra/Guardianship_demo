@@ -72,14 +72,14 @@ async function createClientAssertion(clientId: string, kid?: string): Promise<st
 }
 
 function resolveClientId(provider: string): string {
-  if (provider === "idporten-tjenesteeier") {
+  if (provider === "idporten-tjenesteeier" || provider === "idporten-fullmakt") {
     return process.env.IDPORTEN_TJENESTEEIER_CLIENT_ID ?? process.env.IDPORTEN_CLIENT_ID!
   }
   return process.env.IDPORTEN_CLIENT_ID!
 }
 
 function resolveKid(provider: string): string | undefined {
-  if (provider === "idporten-tjenesteeier") {
+  if (provider === "idporten-tjenesteeier" || provider === "idporten-fullmakt") {
     return process.env.IDPORTEN_TJENESTEEIER_KID ?? idportenJwk?.kid
   }
   return idportenJwk?.kid
@@ -209,8 +209,9 @@ if (process.env.IDPORTEN_TJENESTEEIER_CLIENT_ID) {
 providers.push(
   buildIdportenProvider({
     id: "idporten-fullmakt",
-    clientId: process.env.IDPORTEN_CLIENT_ID,
+    clientId: process.env.IDPORTEN_TJENESTEEIER_CLIENT_ID ?? process.env.IDPORTEN_CLIENT_ID,
     scope: "openid profile",
+    kid: process.env.IDPORTEN_TJENESTEEIER_KID ?? idportenJwk?.kid,
     extraAuthParams: { authorization_details: FULLMAKT_AUTHORIZATION_DETAILS },
   }),
 )
@@ -228,16 +229,19 @@ export const config: NextAuthConfig = {
         token.accessToken = account.access_token
         token.refreshToken = account.refresh_token
         token.expiresAt = account.expires_at
-        if (account.authorization_details) token.authorizationDetails = account.authorization_details
+        const authDetails = account.authorization_details ?? profile?.authorization_details
+        if (authDetails) token.authorizationDetails = authDetails as unknown
         return token
       }
+      const provider = (token.provider as string | undefined) ?? "idporten"
+      // Fullmakt-sesjoner kan ikke fornyes — fullmaktsgiveren må velges på nytt ved neste innlogging
+      if (provider === "idporten-fullmakt") return token
       const expiresAt = token.expiresAt as number | undefined
       if (!expiresAt || Date.now() / 1000 < expiresAt - REFRESH_BUFFER_SECONDS) {
         return token
       }
       const refreshToken = token.refreshToken as string | undefined
       if (!refreshToken) return token
-      const provider = (token.provider as string | undefined) ?? "idporten"
       const clientId = resolveClientId(provider)
       const kid = resolveKid(provider)
       const refreshed = await refreshIdPortenToken(refreshToken, clientId, kid)

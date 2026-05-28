@@ -7,10 +7,22 @@ export const PERMISSION_ROLE_LABELS: Record<PermissionRole, string> = {
   arbeid: "Arbeid og sysselsetting",
 }
 
+export const OWNER_LABELS: Record<string, string> = {
+  husbanken: "Husbanken",
+  nav: "NAV",
+}
+
+export interface FullmaktPermission {
+  owner: string
+  role: string
+}
+
 export interface FullmaktClaim {
   type: string
+  permissions?: FullmaktPermission[]
   permission_roles?: string[]
   authorizer?: { pid?: string; name?: string }
+  authorized_representative?: { pid?: string; name?: string }
   [key: string]: unknown
 }
 
@@ -21,6 +33,13 @@ export function extractFullmaktClaims(authorizationDetails: unknown): FullmaktCl
   )
 }
 
+export function getGrantedPermissions(claims: FullmaktClaim[]): FullmaktPermission[] {
+  return claims.flatMap((c) => {
+    if (c.permissions) return c.permissions
+    return (c.permission_roles ?? []).map((role) => ({ owner: "", role }))
+  })
+}
+
 export function getGrantedRoles(claims: FullmaktClaim[]): string[] {
-  return claims.flatMap((c) => c.permission_roles ?? [])
+  return getGrantedPermissions(claims).map((p) => p.role)
 }
