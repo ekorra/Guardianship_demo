@@ -7,6 +7,7 @@ import {
 } from "@/lib/fullmakt"
 import type { PermissionRole } from "@/lib/fullmakt"
 import { getGuardianshipMeta } from "@/lib/guardianships"
+import { signIn } from "@/lib/auth"
 import { FullmaktTokenTrace } from "./FullmaktTokenTrace"
 import { DevPanel } from "@/components/DevPanel"
 
@@ -64,18 +65,33 @@ export default async function FullmaktPage() {
           {authorizer && (
             <div className="mt-4 pt-4 border-t border-gray-100">
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Opptrer på vegne av</p>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-purple-50 border border-purple-200 flex items-center justify-center shrink-0">
-                  <span className="text-sm font-semibold text-purple-500">
-                    {(authorizer.name ?? "?").charAt(0)}
-                  </span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-purple-50 border border-purple-200 flex items-center justify-center shrink-0">
+                    <span className="text-sm font-semibold text-purple-500">
+                      {(authorizer.name ?? "?").charAt(0)}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{authorizer.name ?? "Ukjent"}</p>
+                    {authorizer.pid && (
+                      <p className="text-xs text-gray-400 font-mono mt-0.5">{authorizer.pid}</p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">{authorizer.name ?? "Ukjent"}</p>
-                  {authorizer.pid && (
-                    <p className="text-xs text-gray-400 font-mono mt-0.5">{authorizer.pid}</p>
-                  )}
-                </div>
+                <form
+                  action={async () => {
+                    "use server"
+                    await signIn("idporten-fullmakt", { redirectTo: "/dashboard/fullmakt" })
+                  }}
+                >
+                  <button
+                    type="submit"
+                    className="text-xs text-purple-600 hover:text-purple-800 border border-purple-200 hover:border-purple-400 rounded-md px-3 py-1.5 transition-colors"
+                  >
+                    Bytt vergehaver
+                  </button>
+                </form>
               </div>
             </div>
           )}
