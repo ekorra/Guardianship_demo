@@ -46,17 +46,21 @@ jobs:
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           IDPORTEN_CLIENT_ID: ${{ secrets.IDPORTEN_CLIENT_ID }}
           IDPORTEN_PRIVATE_KEY_JWK: ${{ secrets.IDPORTEN_PRIVATE_KEY_JWK }}
+          IDPORTEN_TJENESTEEIER_CLIENT_ID: ${{ secrets.IDPORTEN_TJENESTEEIER_CLIENT_ID }}
+          IDPORTEN_TJENESTEEIER_KID: ${{ secrets.IDPORTEN_TJENESTEEIER_KID }}
           MASKINPORTEN_CLIENT_ID: ${{ secrets.MASKINPORTEN_CLIENT_ID }}
           MASKINPORTEN_PRIVATE_KEY_JWK: ${{ secrets.MASKINPORTEN_PRIVATE_KEY_JWK }}
           STANDARD_BRUKER: ${{ secrets.STANDARD_BRUKER }}
         run: |
-          printf 'AUTH_SECRET=%s\n'                  "$AUTH_SECRET"                  >> .env.local
-          printf 'AUTH_URL=http://localhost:3000\n'                                  >> .env.local
-          printf 'IDPORTEN_CLIENT_ID=%s\n'           "$IDPORTEN_CLIENT_ID"           >> .env.local
-          printf 'IDPORTEN_PRIVATE_KEY_JWK=%s\n'     "$IDPORTEN_PRIVATE_KEY_JWK"     >> .env.local
-          printf 'MASKINPORTEN_CLIENT_ID=%s\n'       "$MASKINPORTEN_CLIENT_ID"       >> .env.local
-          printf 'MASKINPORTEN_PRIVATE_KEY_JWK=%s\n' "$MASKINPORTEN_PRIVATE_KEY_JWK" >> .env.local
-          printf 'STANDARD_BRUKER=%s\n'              "$STANDARD_BRUKER"              >> .env.local
+          printf 'AUTH_SECRET=%s\n'                        "$AUTH_SECRET"                        >> .env.local
+          printf 'AUTH_URL=http://localhost:3000\n'                                               >> .env.local
+          printf 'IDPORTEN_CLIENT_ID=%s\n'                 "$IDPORTEN_CLIENT_ID"                 >> .env.local
+          printf 'IDPORTEN_PRIVATE_KEY_JWK=%s\n'           "$IDPORTEN_PRIVATE_KEY_JWK"           >> .env.local
+          printf 'IDPORTEN_TJENESTEEIER_CLIENT_ID=%s\n'    "$IDPORTEN_TJENESTEEIER_CLIENT_ID"    >> .env.local
+          printf 'IDPORTEN_TJENESTEEIER_KID=%s\n'          "$IDPORTEN_TJENESTEEIER_KID"          >> .env.local
+          printf 'MASKINPORTEN_CLIENT_ID=%s\n'             "$MASKINPORTEN_CLIENT_ID"             >> .env.local
+          printf 'MASKINPORTEN_PRIVATE_KEY_JWK=%s\n'       "$MASKINPORTEN_PRIVATE_KEY_JWK"       >> .env.local
+          printf 'STANDARD_BRUKER=%s\n'                    "$STANDARD_BRUKER"                    >> .env.local
 
       - name: Kjør e2e-tester
         env:
