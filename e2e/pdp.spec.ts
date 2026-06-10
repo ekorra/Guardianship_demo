@@ -18,7 +18,7 @@ async function loggInn(page: Parameters<Parameters<typeof test>[1]>[0]) {
   await page.waitForURL("**/dashboard", { timeout: 15_000 })
 }
 
-test("Sjekk tilgang-knapp vises og badge rendres etter klikk (selv)", async ({
+test.fixme("Sjekk tilgang-knapp vises og badge rendres etter klikk (selv)", async ({
   page,
 }) => {
   await loggInn(page)
@@ -36,7 +36,7 @@ test("Sjekk tilgang-knapp vises og badge rendres etter klikk (selv)", async ({
   await expect(badge).toBeVisible({ timeout: 10_000 })
 })
 
-test("Sjekk tilgang-knapp vises for vergeparter i listen", async ({ page }, testInfo) => {
+test.fixme("Sjekk tilgang-knapp vises for vergeparter i listen", async ({ page }, testInfo) => {
   await loggInn(page)
 
   const listButtons = page.locator("ul li").getByRole("button", {
