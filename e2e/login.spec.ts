@@ -10,7 +10,7 @@ test("Innlogging og utlogging via ID-porten TestID", async ({ page }) => {
   await expect(page).toHaveURL("/")
 
   // --- 2. Klikk "Logg inn med ID-porten" (alternativ 2) ---
-  await page.getByRole("button", { name: /logg inn med id-porten/i }).click()
+  await page.getByTestId("login-tjenesteeier").click()
 
   // --- 3. Vent på ID-portens selector-side ---
   await page.waitForURL(/test\.idporten\.no/, { timeout: 15_000 })

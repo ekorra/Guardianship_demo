@@ -36,6 +36,7 @@ export default async function Home() {
             >
               <button
                 type="submit"
+                data-testid="login-fullmakt"
                 className="w-full bg-purple-700 hover:bg-purple-800 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors"
               >
                 Logg inn med ID-porten
@@ -62,6 +63,7 @@ export default async function Home() {
             >
               <button
                 type="submit"
+                data-testid="login-tjenesteeier"
                 className="w-full bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors"
               >
                 Logg inn med ID-porten
@@ -88,6 +90,7 @@ export default async function Home() {
             >
               <button
                 type="submit"
+                data-testid="login-sluttbrukersystem"
                 className="w-full bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors"
               >
                 Logg inn med ID-porten
