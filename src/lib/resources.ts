@@ -5,6 +5,7 @@ export interface Resource {
 }
 
 export const PRECONFIGURED_RESOURCES: Resource[] = [
+  { id: "urn:altinn:accesspackage:innbygger-stotte-tilskudd", label: "Støtte og tilskudd" },
   { id: "ttd-vergemalsdemo", label: "Vergmålsdemo (TTD)" },
   { id: "ttd-fullmaktdemo", label: "Fullmaktdemo (TTD)" },
   { id: "nav-dagpenger", label: "Dagpenger (NAV)" },
