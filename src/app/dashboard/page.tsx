@@ -3,7 +3,6 @@ import { getAuthorizedParties, isVergePart, isInnbyggerPart, getVergemålGrupper
 import { getAccessPackageMetadata } from "@/lib/accesspackages"
 import type { TraceEntry } from "@/lib/trace"
 import { DevPanel } from "@/components/DevPanel"
-import { TilgangKnapp } from "@/components/TilgangKnapp"
 import { ResourceVelger } from "@/components/ResourceVelger"
 import { AktørVelger } from "@/components/AktørVelger"
 import type { AktørData } from "@/components/AktørVelger"
@@ -81,7 +80,6 @@ export default async function DashboardPage() {
                 </p>
                 <p className="text-sm text-gray-400 font-mono mt-0.5">{pid ?? "—"}</p>
               </div>
-              {pid && <TilgangKnapp resourcePid={pid} />}
             </div>
           </div>
 
