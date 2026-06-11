@@ -101,3 +101,19 @@ export async function getMaskinportenToken(
 export function _resetTokenCache() {
   cache.clear()
 }
+
+/** Dekoder Maskinporten JWT-payload og returnerer orgnr fra consumer.ID. */
+export function decodeOrgnr(token: string): string | null {
+  try {
+    const parts = token.split(".")
+    if (parts.length < 2) return null
+    const payload = JSON.parse(
+      Buffer.from(parts[1], "base64url").toString("utf-8")
+    ) as { consumer?: { ID?: string } }
+    const id = payload.consumer?.ID
+    if (!id) return null
+    return id.startsWith("0192:") ? id.slice(5) : id
+  } catch {
+    return null
+  }
+}

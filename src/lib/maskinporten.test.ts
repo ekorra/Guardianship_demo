@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { generateKeyPair, exportJWK } from "jose"
-import { getMaskinportenToken, _resetTokenCache } from "./maskinporten"
+import { getMaskinportenToken, _resetTokenCache, decodeOrgnr } from "./maskinporten"
 
 async function makeTestJwk() {
   const { privateKey } = await generateKeyPair("RS256", { extractable: true })
@@ -114,5 +114,36 @@ describe("getMaskinportenToken", () => {
     await expect(getMaskinportenToken(SCOPE)).rejects.toThrow(
       "MASKINPORTEN_CLIENT_ID og MASKINPORTEN_PRIVATE_KEY_JWK må være satt"
     )
+  })
+})
+
+describe("decodeOrgnr", () => {
+  function makeJwt(payload: Record<string, unknown>): string {
+    const header = Buffer.from(JSON.stringify({ alg: "RS256" })).toString("base64url")
+    const body = Buffer.from(JSON.stringify(payload)).toString("base64url")
+    return `${header}.${body}.fakesignature`
+  }
+
+  it("returnerer orgnr fra consumer.ID med 0192-prefix", () => {
+    const token = makeJwt({
+      consumer: { authority: "iso6523-actorid-upis", ID: "0192:991825827" },
+    })
+    expect(decodeOrgnr(token)).toBe("991825827")
+  })
+
+  it("returnerer null hvis consumer mangler", () => {
+    const token = makeJwt({ iss: "https://test.maskinporten.no/" })
+    expect(decodeOrgnr(token)).toBeNull()
+  })
+
+  it("returnerer null hvis token er ugyldig base64", () => {
+    expect(decodeOrgnr("ikke.et.jwt")).toBeNull()
+  })
+
+  it("returnerer ID uendret hvis prefix ikke er 0192:", () => {
+    const token = makeJwt({
+      consumer: { authority: "iso6523-actorid-upis", ID: "0184:991825827" },
+    })
+    expect(decodeOrgnr(token)).toBe("0184:991825827")
   })
 })
