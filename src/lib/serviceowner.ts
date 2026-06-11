@@ -66,6 +66,25 @@ export async function delegateServiceownerPackage(
   packageUrn: string,
   traces?: TraceEntry[],
 ): Promise<void> {
+  if (process.env.MOCK_SERVICEOWNER_DELEGATE === "true") {
+    traces?.push({
+      name: "Serviceowner: deleger tilgangspakke [MOCK]",
+      group: "tjenesteeier",
+      request: {
+        method: "POST",
+        url: `${BASE_URL}/serviceowner/connections/accesspackages`,
+        body: {
+          from: `urn:altinn:person:identifier-no:${fromPid}`,
+          to: `urn:altinn:person:identifier-no:${toPid}`,
+          packageUrn,
+        },
+      },
+      response: { status: 201, body: { mock: true } },
+      durationMs: 0,
+    })
+    return
+  }
+
   const token = await getMaskinportenToken(SCOPE_DELEGATE, traces)
 
   const url = `${BASE_URL}/serviceowner/connections/accesspackages`
