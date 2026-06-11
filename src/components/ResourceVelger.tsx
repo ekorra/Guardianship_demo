@@ -28,7 +28,6 @@ export function ResourceVelger() {
   const [showAdd, setShowAdd] = useState(false)
   const [newId, setNewId] = useState("")
   const [newLabel, setNewLabel] = useState("")
-  const [newAction, setNewAction] = useState("")
   const addInputRef = useRef<HTMLInputElement>(null)
 
   const allResources = [...PRECONFIGURED_RESOURCES, ...customResources]
@@ -61,25 +60,20 @@ export function ResourceVelger() {
     const id = newId.trim()
     if (!id) return
     const label = newLabel.trim() || id
-    const action = newAction.trim() || undefined
-    const updated = [...customResources, { id, label, ...(action && { action }) }]
+    const updated = [...customResources, { id, label }]
     setCustomResources(updated)
     saveCustomResources(updated)
     setSelectedId(id)
-    dispatchChange(id, action)
+    dispatchChange(id)
     setNewId("")
     setNewLabel("")
-    setNewAction("")
     setShowAdd(false)
   }
-
-  const selectedResource = allResources.find((r) => r.id === selectedId)
-  const effectiveAction = selectedResource?.action ?? "read"
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
       <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">
-        Ressurs for tilgangssjekk
+        Ressurs
       </p>
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -92,10 +86,6 @@ export function ResourceVelger() {
             <option key={r.id} value={r.id}>{r.label}</option>
           ))}
         </select>
-
-        <span className="text-xs text-gray-400 font-mono shrink-0">
-          action: <span className="text-gray-600">{effectiveAction}</span>
-        </span>
 
         <button
           onClick={() => setShowAdd((v) => !v)}
@@ -127,16 +117,6 @@ export function ResourceVelger() {
               onKeyDown={(e) => e.key === "Enter" && addCustomResource()}
               placeholder="Visningsnavn (valgfritt)"
               className="text-xs border border-gray-200 rounded px-2 py-1.5 w-40 focus:outline-none focus:ring-1 focus:ring-blue-300"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">Action</label>
-            <input
-              value={newAction}
-              onChange={(e) => setNewAction(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addCustomResource()}
-              placeholder='read (standard)'
-              className="text-xs border border-gray-200 rounded px-2 py-1.5 w-28 focus:outline-none focus:ring-1 focus:ring-blue-300"
             />
           </div>
           <button
