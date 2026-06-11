@@ -2,10 +2,10 @@ import { auth } from "@/lib/auth"
 import { getMaskinportenToken, decodeOrgnr } from "@/lib/maskinporten"
 import { getAuthorizedParties, isVergePart, isInnbyggerPart, getVergemålGruppert, getInnbyggerGruppert } from "@/lib/altinn"
 import { getAccessPackageMetadata } from "@/lib/accesspackages"
+import { checkPdpAccess } from "@/lib/pdp"
 import type { TraceEntry } from "@/lib/trace"
 import { DevPanel } from "@/components/DevPanel"
-import { ResourceVelger } from "@/components/ResourceVelger"
-import { AktørVelger } from "@/components/AktørVelger"
+import { DashboardTabs } from "@/components/DashboardTabs"
 import type { AktørData } from "@/components/AktørVelger"
 import { redirect } from "next/navigation"
 
@@ -27,6 +27,7 @@ export default async function DashboardPage() {
   let tjenesteeier: TjenesteeierInfo = { navn: "Tjenesteeier", orgnr: null }
   let aktørData: AktørData[] = []
   let altinnError: string | null = null
+  let harSkrankeAccess = false
   const traces: TraceEntry[] = []
 
   try {
@@ -51,16 +52,18 @@ export default async function DashboardPage() {
   }
 
   if (pid) {
-    const [partiesResult, metaResult] = await Promise.allSettled([
+    const [partiesResult, metaResult, pdpResult] = await Promise.allSettled([
       getAuthorizedParties(pid, isDev ? traces : undefined),
       getAccessPackageMetadata(),
+      checkPdpAccess(pid, pid, isDev ? traces : undefined, "ttd-skrankepunkt", "write"),
     ])
+
+    harSkrankeAccess = pdpResult.status === "fulfilled" && pdpResult.value === "Permit"
 
     if (partiesResult.status === "fulfilled" && metaResult.status === "fulfilled") {
       const parties = partiesResult.value
       const metaMap = metaResult.value
 
-      // Innlogget bruker først, deretter øvrige parter
       const sorted = [
         ...parties.filter((p) => p.personId === pid),
         ...parties.filter((p) => p.personId !== pid),
@@ -116,19 +119,12 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          <ResourceVelger />
-
-          {altinnError ? (
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <p className="text-sm text-red-600">Kunne ikke hente data fra Altinn: {altinnError}</p>
-            </div>
-          ) : aktørData.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <p className="text-sm text-gray-400 italic">Ingen aktører funnet.</p>
-            </div>
-          ) : (
-            <AktørVelger aktører={aktørData} loggedInPid={pid ?? ""} />
-          )}
+          <DashboardTabs
+            harSkrankeAccess={harSkrankeAccess}
+            aktørData={aktørData}
+            loggedInPid={pid ?? ""}
+            altinnError={altinnError}
+          />
         </div>
       </main>
 
