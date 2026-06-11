@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth"
+import { getMaskinportenToken, decodeOrgnr } from "@/lib/maskinporten"
 import { getAuthorizedParties, isVergePart, isInnbyggerPart, getVergemålGruppert, getInnbyggerGruppert } from "@/lib/altinn"
 import { getAccessPackageMetadata } from "@/lib/accesspackages"
 import type { TraceEntry } from "@/lib/trace"
@@ -10,6 +11,11 @@ import { redirect } from "next/navigation"
 
 const isDev = process.env.NODE_ENV === "development"
 
+interface TjenesteeierInfo {
+  navn: string
+  orgnr: string | null
+}
+
 export default async function DashboardPage() {
   const session = await auth()
 
@@ -18,9 +24,31 @@ export default async function DashboardPage() {
   }
 
   const pid = session.user?.pid
+  let tjenesteeier: TjenesteeierInfo = { navn: "Tjenesteeier", orgnr: null }
   let aktørData: AktørData[] = []
   let altinnError: string | null = null
   const traces: TraceEntry[] = []
+
+  try {
+    const mpToken = await getMaskinportenToken(
+      "altinn:accessmanagement/authorizedparties.resourceowner"
+    )
+    const orgnr = decodeOrgnr(mpToken)
+    if (orgnr) {
+      const brregRes = await fetch(
+        `https://data.brreg.no/enhetsregisteret/api/enheter/${orgnr}`,
+        { next: { revalidate: 3600 } }
+      )
+      if (brregRes.ok) {
+        const brregData = (await brregRes.json()) as { navn?: string }
+        tjenesteeier = { navn: brregData.navn ?? "Ukjent virksomhet", orgnr }
+      } else {
+        tjenesteeier = { navn: "Ukjent virksomhet", orgnr }
+      }
+    }
+  } catch {
+    // Beholder default "Tjenesteeier" hvis noe feiler
+  }
 
   if (pid) {
     const [partiesResult, metaResult] = await Promise.allSettled([
@@ -58,7 +86,12 @@ export default async function DashboardPage() {
       <main className="min-h-screen bg-gray-50">
         <nav className="bg-white shadow-sm">
           <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 className="text-lg font-semibold text-gray-800">Tjenesteeier</h1>
+            <div>
+              <p className="text-lg font-semibold text-gray-800">{tjenesteeier.navn}</p>
+              {tjenesteeier.orgnr && (
+                <p className="text-xs text-gray-400 font-mono">orgnr: {tjenesteeier.orgnr}</p>
+              )}
+            </div>
             <a href="/api/logout" className="text-sm text-gray-500 hover:text-gray-700">
               Logg ut
             </a>
