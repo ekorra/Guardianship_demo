@@ -49,7 +49,18 @@ async function exchangeForAltinnToken(
 
 export type PdpDecision = "Permit" | "Deny" | "NotApplicable" | "Indeterminate"
 
-function buildXacmlRequest(subjectPid: string, resourcePid: string, resourceId: string, action: string) {
+function buildXacmlRequest(
+  subjectPid: string,
+  resourcePid: string,
+  resourceId: string,
+  action: string,
+  resourceOrgnr?: string,
+) {
+  const resourceAttrId = resourceOrgnr
+    ? "urn:altinn:organization:identifier-no"
+    : "urn:altinn:person:identifier-no"
+  const resourceAttrValue = resourceOrgnr ?? resourcePid
+
   return {
     AccessSubject: [
       {
@@ -80,8 +91,8 @@ function buildXacmlRequest(subjectPid: string, resourcePid: string, resourceId: 
             Value: resourceId,
           },
           {
-            AttributeId: "urn:altinn:person:identifier-no",
-            Value: resourcePid,
+            AttributeId: resourceAttrId,
+            Value: resourceAttrValue,
           },
         ],
       },
@@ -95,12 +106,13 @@ export async function checkPdpAccess(
   traces?: TraceEntry[],
   resourceId: string = DEFAULT_RESOURCE_ID,
   action: string = DEFAULT_ACTION,
+  resourceOrgnr?: string,
 ): Promise<PdpDecision> {
   const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
   const maskinportenToken = await getMaskinportenToken(SCOPE, traces)
   const altinnToken = await exchangeForAltinnToken(maskinportenToken, subscriptionKey, traces)
 
-  const requestBody = { Request: buildXacmlRequest(subjectPid, resourcePid, resourceId, action) }
+  const requestBody = { Request: buildXacmlRequest(subjectPid, resourcePid, resourceId, action, resourceOrgnr) }
   const t0 = Date.now()
 
   const response = await fetch(PDP_URL, {

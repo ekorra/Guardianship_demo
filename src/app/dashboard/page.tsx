@@ -75,6 +75,7 @@ export default async function DashboardPage() {
         partyUuid: party.partyUuid,
         name: party.name,
         personId: party.personId,
+        organizationNumber: party.organizationNumber,
         vergemålGrupper: isVergePart(party) ? getVergemålGruppert(party, metaMap) : [],
         innbyggerGrupper: isInnbyggerPart(party) ? getInnbyggerGruppert(party, metaMap) : [],
       }))
