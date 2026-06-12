@@ -124,7 +124,7 @@ export async function delegateServiceownerPackage(
   traces?.push({
     name: "Serviceowner: deleger tilgangspakke",
     group: "tjenesteeier",
-    request: { method: "POST", url },
+    request: { method: "POST", url, body: requestBody },
     response: { status: response.status, body },
     durationMs,
   })
