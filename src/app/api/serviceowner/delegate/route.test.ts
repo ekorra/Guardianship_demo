@@ -60,6 +60,13 @@ describe("POST /api/serviceowner/delegate", () => {
 
     expect(res.status).toBe(200)
     expect(data.ok).toBe(true)
+    expect(checkPdpAccess).toHaveBeenCalledWith(
+      "01017012345",
+      "01017012345",
+      undefined,
+      "ttd-skrankepunkt",
+      "write",
+    )
     expect(delegateServiceownerPackage).toHaveBeenCalledWith(
       VALID_BODY.fromPid,
       VALID_BODY.toPid,
