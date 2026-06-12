@@ -30,7 +30,7 @@ export function SkrankepunktFane() {
       const res = await fetch("/api/serviceowner/delegate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fromPid: fraPid, toPid: tilPid, packageUrn: selectedPackage }),
+        body: JSON.stringify({ fromPid: fraPid, toPid: tilPid, packageUrn: selectedPackage, skrankepunkt: true }),
       })
       const data = (await res.json()) as { ok?: boolean; error?: string; traces?: unknown[] }
       if (data.traces?.length) {

@@ -14,32 +14,34 @@ export async function POST(request: Request) {
 
   const pid = session.user.pid
 
-  let body: { fromPid?: string; toPid?: string; packageUrn?: string }
+  let body: { fromPid?: string; toPid?: string; packageUrn?: string; skrankepunkt?: boolean }
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: "Ugyldig forespørsel" }, { status: 400 })
   }
 
-  const { fromPid, toPid, packageUrn } = body
+  const { fromPid, toPid, packageUrn, skrankepunkt } = body
   if (!fromPid || !toPid || !packageUrn) {
     return NextResponse.json({ error: "fromPid, toPid og packageUrn er påkrevd" }, { status: 400 })
   }
 
   const traces: TraceEntry[] = []
   try {
-    const pdpDecision = await checkPdpAccess(
-      pid,
-      pid,
-      isDev ? traces : undefined,
-      "ttd-skrankepunkt",
-      "write",
-    )
-    if (pdpDecision !== "Permit") {
-      return NextResponse.json(
-        { ok: false, error: "Tilgang til skrankepunkt er trukket tilbake", traces: isDev ? traces : undefined },
-        { status: 403 },
+    if (skrankepunkt) {
+      const pdpDecision = await checkPdpAccess(
+        pid,
+        pid,
+        isDev ? traces : undefined,
+        "ttd-skrankepunkt",
+        "write",
       )
+      if (pdpDecision !== "Permit") {
+        return NextResponse.json(
+          { ok: false, error: "Tilgang til skrankepunkt er trukket tilbake", traces: isDev ? traces : undefined },
+          { status: 403 },
+        )
+      }
     }
     await delegateServiceownerPackage(fromPid, toPid, packageUrn, isDev ? traces : undefined)
     return NextResponse.json({ ok: true, traces: isDev ? traces : undefined })
