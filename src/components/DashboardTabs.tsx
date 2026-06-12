@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { ResourceVelger } from "@/components/ResourceVelger"
 import { AktørVelger } from "@/components/AktørVelger"
 import type { AktørData } from "@/components/AktørVelger"
 import { SkrankepunktFane } from "@/components/SkrankepunktFane"
@@ -120,7 +119,7 @@ export function DashboardTabs({ harSkrankeAccess: initialHarSkrankeAccess, aktø
 
       {activeTab === "fullmakter" && (
         <>
-          <ResourceVelger />
+          {/* ResourceVelger skjult inntil videre (TASK-42) */}
           {altinnError ? (
             <div className="bg-white rounded-lg shadow-sm p-6">
               <p className="text-sm text-red-600">Kunne ikke hente data fra Altinn: {altinnError}</p>
