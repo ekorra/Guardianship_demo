@@ -71,7 +71,7 @@ export function TjenesteeierDelegereSkjema({ selectedAktørPid, selectedAktørNa
                 value={tilPid}
                 onChange={(e) => setTilPid(e.target.value)}
                 placeholder="11 siffer"
-                className="border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-300"
+                className="border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-300"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -79,7 +79,7 @@ export function TjenesteeierDelegereSkjema({ selectedAktørPid, selectedAktørNa
               <select
                 value={selectedPackage}
                 onChange={(e) => setSelectedPackage(e.target.value)}
-                className="border border-gray-200 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-300"
+                className="border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-blue-300"
               >
                 {DELEGERBARE_PAKKER.map((p) => (
                   <option key={p.id} value={p.id}>{p.label}</option>
