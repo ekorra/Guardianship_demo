@@ -55,7 +55,7 @@ export function TjenesteeierDelegereSkjema({ selectedAktørPid, selectedAktørNa
 
   return (
     <div className="border-t border-gray-100 pt-4 mt-2 text-sm">
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Deleger fullmakt</p>
+      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Gi fullmakt</p>
       {step === "form" && (
         <>
           <div className="flex flex-col gap-3">
