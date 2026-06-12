@@ -11,7 +11,6 @@ interface Props {
 }
 
 export function TjenesteeierDelegereSkjema({ selectedAktørPid, selectedAktørName }: Props) {
-  const [open, setOpen] = useState(false)
   const [step, setStep] = useState<Step>("form")
   const [tilPid, setTilPid] = useState("")
   const [selectedPackage, setSelectedPackage] = useState(DELEGERBARE_PAKKER[0]?.id ?? "")
@@ -25,7 +24,6 @@ export function TjenesteeierDelegereSkjema({ selectedAktørPid, selectedAktørNa
     setTilPid("")
     setSelectedPackage(DELEGERBARE_PAKKER[0]?.id ?? "")
     setError(null)
-    setOpen(false)
   }
 
   async function send() {
@@ -55,19 +53,9 @@ export function TjenesteeierDelegereSkjema({ selectedAktørPid, selectedAktørNa
     }
   }
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 rounded px-2 py-1"
-      >
-        Deleger fullmakt
-      </button>
-    )
-  }
-
   return (
-    <div className="mt-3 border border-gray-200 rounded-lg p-4 bg-white text-sm">
+    <div className="border-t border-gray-100 pt-4 mt-2 text-sm">
+      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Deleger fullmakt</p>
       {step === "form" && (
         <>
           <div className="flex flex-col gap-3">
@@ -99,7 +87,7 @@ export function TjenesteeierDelegereSkjema({ selectedAktørPid, selectedAktørNa
               </select>
             </div>
           </div>
-          <div className="flex gap-2 mt-3">
+          <div className="mt-3">
             <button
               onClick={() => setStep("bekreft")}
               disabled={tilPid.length < 11}
@@ -107,7 +95,6 @@ export function TjenesteeierDelegereSkjema({ selectedAktørPid, selectedAktørNa
             >
               Neste
             </button>
-            <button onClick={reset} className="text-xs text-gray-400 hover:text-gray-600">Avbryt</button>
           </div>
         </>
       )}

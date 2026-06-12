@@ -27,15 +27,8 @@ export function AktørVelger({ selected }: { selected: AktørData | undefined })
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
-      <div className="mb-4">
-        <TjenesteeierDelegereSkjema
-          selectedAktørPid={selected.personId ?? ""}
-          selectedAktørName={selected.name}
-        />
-      </div>
-
       {hasFullmakter ? (
-        <div>
+        <div className="mb-2">
           {selected.vergemålGrupper.length > 0 && (
             <VergemålDetaljer grupper={selected.vergemålGrupper} tittel="Vergemålsfullmakter" variant="vergemål" />
           )}
@@ -44,8 +37,13 @@ export function AktørVelger({ selected }: { selected: AktørData | undefined })
           )}
         </div>
       ) : (
-        <p className="text-sm text-gray-400 italic">Ingen registrerte fullmakter for valgt aktør.</p>
+        <p className="text-sm text-gray-400 italic mb-2">Ingen registrerte fullmakter for valgt aktør.</p>
       )}
+
+      <TjenesteeierDelegereSkjema
+        selectedAktørPid={selected.personId ?? ""}
+        selectedAktørName={selected.name}
+      />
     </div>
   )
 }
