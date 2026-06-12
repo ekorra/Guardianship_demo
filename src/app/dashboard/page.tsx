@@ -58,9 +58,7 @@ export default async function DashboardPage() {
       checkPdpAccess(pid, pid, isDev ? traces : undefined, "ttd-skrankepunkt", "write"),
     ])
 
-    // TODO: gjenaktiver PDP-sjekk etter testing
-    harSkrankeAccess = true
-    void pdpResult
+    harSkrankeAccess = pdpResult.status === "fulfilled" && pdpResult.value === "Permit"
 
     if (partiesResult.status === "fulfilled" && metaResult.status === "fulfilled") {
       const parties = partiesResult.value
