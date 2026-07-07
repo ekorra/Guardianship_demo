@@ -6,6 +6,7 @@ import { checkPdpAccess } from "@/lib/pdp"
 import type { TraceEntry } from "@/lib/trace"
 import { DevPanel } from "@/components/DevPanel"
 import { DashboardTabs } from "@/components/DashboardTabs"
+import { SendMeldingSkjema } from "@/components/SendMeldingSkjema"
 import type { AktørData } from "@/components/AktørVelger"
 import { redirect } from "next/navigation"
 
@@ -126,6 +127,8 @@ export default async function DashboardPage() {
             loggedInPid={pid ?? ""}
             altinnError={altinnError}
           />
+
+          <SendMeldingSkjema />
         </div>
       </main>
 
