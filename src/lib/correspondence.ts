@@ -20,31 +20,32 @@ export async function sendCorrespondence(
 
   const url = `${BASE_URL}/correspondence`
   const requestBody = {
-    resourceId: RESOURCE_ID,
-    sender: `urn:altinn:organization:identifier-no:${orgnr}`,
-    sendersReference: crypto.randomUUID(),
-    recipients: [`urn:altinn:person:identifier-no:${recipientPid}`],
-    content: {
-      language: "nb",
-      title,
-      summary: title,
-      body: `<p>${body}</p>`,
+    correspondence: {
+      resourceId: RESOURCE_ID,
+      sender: `urn:altinn:organization:identifier-no:${orgnr}`,
+      sendersReference: crypto.randomUUID(),
+      requestedPublishTime: null,
+      allowSystemDeleteAfter: null,
+      propertyList: {},
+      ignoreReservation: false,
+      isConfirmationNeeded: false,
+      content: {
+        language: "nb",
+        messageTitle: title,
+        messageSummary: title,
+        messageBody: `<p>${body}</p>`,
+      },
     },
-    requestedPublishTime: null,
-    allowSystemDeleteAfter: null,
-    propertyList: {},
-    ignoreReservation: false,
-    isConfirmationNeeded: false,
+    recipients: [`urn:altinn:person:identifier-no:${recipientPid}`],
+    request: { isWithoutReservationRequest: false },
   }
 
   const t0 = Date.now()
-  const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
   const response = await fetch(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
     },
     body: JSON.stringify(requestBody),
   })

@@ -7,14 +7,11 @@ export async function GET(request: NextRequest) {
 
   const baseUrl = process.env.AUTH_URL ?? new URL(request.url).origin
 
-  // post_logout_redirect_uri er utelatt med vilje: hvis den sendes men ikke er registrert i
-  // Digdir selvbetjening kan ID-porten avvise hele forespørselen uten å rydde opp i sesjonen.
-  // For å gjeninnføre redirect tilbake til appen, registrer "${baseUrl}/login" i selvbetjening
-  // og legg til: url.searchParams.set("post_logout_redirect_uri", `${baseUrl}/login`)
   const target = idToken
     ? (() => {
         const url = new URL("https://login.test.idporten.no/logout")
         url.searchParams.set("id_token_hint", idToken)
+        url.searchParams.set("post_logout_redirect_uri", baseUrl)
         return url.toString()
       })()
     : `${baseUrl}/login`
