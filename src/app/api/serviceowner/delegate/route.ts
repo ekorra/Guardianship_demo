@@ -28,8 +28,21 @@ export async function POST(request: Request) {
 
   const traces: TraceEntry[] = []
   try {
-    // TODO: gjenaktiver PDP-resjekk for skrankepunkt når tilgang er satt opp korrekt
-    void skrankepunkt
+    if (skrankepunkt) {
+      const pdpDecision = await checkPdpAccess(
+        pid,
+        pid,
+        isDev ? traces : undefined,
+        "ttd-skrankepunkt",
+        "write",
+      )
+      if (pdpDecision !== "Permit") {
+        return NextResponse.json(
+          { ok: false, error: "Tilgang til skrankepunkt er trukket tilbake", traces: isDev ? traces : undefined },
+          { status: 403 },
+        )
+      }
+    }
     await delegateServiceownerPackage(fromPid, toPid, packageUrn, isDev ? traces : undefined)
     return NextResponse.json({ ok: true, traces: isDev ? traces : undefined })
   } catch (err) {
