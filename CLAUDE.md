@@ -132,6 +132,29 @@ if (data.traces?.length) {
 - Pakke-metadata hentes med UUID (ikke URN) fra `/meta/info/accesspackages/package/{uuid}` — APIet returnerer objekt, ikke array
 - `session.accessToken` (ID-porten access_token) brukes til exchange — `session.idToken` beholdes separat for logout (`id_token_hint`)
 
+### Altinn Correspondence API
+- Endpoint: `POST https://platform.tt02.altinn.no/correspondence/api/v1/correspondence`
+- Autentisering: Maskinporten-token brukes **direkte** (ingen veksling til Altinn-token)
+- Scopes: `altinn:serviceowner altinn:correspondence.write`
+- Request-body MÅ følge `InitializeCorrespondencesExt`-strukturen:
+  ```json
+  {
+    "correspondence": {
+      "resourceId": "ttd-vergemalsdemo-melding",
+      "sender": "urn:altinn:organization:identifier-no:{orgnr}",
+      "sendersReference": "{uuid}",
+      "content": { "language": "nb", "messageTitle": "...", "messageSummary": "...", "messageBody": "<p>...</p>" }
+    },
+    "recipients": ["urn:altinn:person:identifier-no:{pid}"],
+    "request": { "isWithoutReservationRequest": false }
+  }
+  ```
+  Feltnavn i `content` er `messageTitle`/`messageSummary`/`messageBody` — **ikke** `title`/`summary`/`body`
+- **`request`-feltet er påkrevd** og må inneholde `isWithoutReservationRequest` eksplisitt (C# `required`-keyword)
+- **Sender-orgnr dekodes fra Maskinporten-token** via `consumer.ID`-claimet i payload
+- **`hasCompetentAuthority.Organization` MÅ settes i ressursregisteret** — dette er et udokumentert krav for organisasjoner fra Digdirs testorganisasjon (Testdepartementet/TTD). Uten dette feltet returnerer API-et CORR-01036 («ResourceId must match an existing resource»), selv om ressursen finnes. Feltet settes manuelt via Gitea på ressurs-yaml-filen; `resourceType` skal være `CorrespondenceService`
+- Subscription key (`Ocp-Apim-Subscription-Key`) er **ikke** nødvendig for Correspondence API
+
 ### E2E-tester
 - ID-portens TestID-selector-side er ustabil — `click()` er wrapped i `try/catch` med 5s timeout
 - `STANDARD_BRUKER` / `TEST_PID` env-variabel må settes i CI for at e2e-tester kjøres
