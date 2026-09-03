@@ -6,6 +6,7 @@ import { checkPdpAccess } from "@/lib/pdp"
 import type { TraceEntry } from "@/lib/trace"
 import { DevPanel } from "@/components/DevPanel"
 import { DashboardTabs } from "@/components/DashboardTabs"
+import { SendMeldingSkjema } from "@/components/SendMeldingSkjema"
 import type { AktørData } from "@/components/AktørVelger"
 import { redirect } from "next/navigation"
 
@@ -58,9 +59,7 @@ export default async function DashboardPage() {
       checkPdpAccess(pid, pid, isDev ? traces : undefined, "ttd-skrankepunkt", "write"),
     ])
 
-    // TODO: gjenaktiver PDP-sjekk etter testing
-    harSkrankeAccess = true
-    void pdpResult
+    harSkrankeAccess = pdpResult.status === "fulfilled" && pdpResult.value === "Permit"
 
     if (partiesResult.status === "fulfilled" && metaResult.status === "fulfilled") {
       const parties = partiesResult.value
@@ -75,6 +74,7 @@ export default async function DashboardPage() {
         partyUuid: party.partyUuid,
         name: party.name,
         personId: party.personId,
+        organizationNumber: party.organizationNumber,
         vergemålGrupper: isVergePart(party) ? getVergemålGruppert(party, metaMap) : [],
         innbyggerGrupper: isInnbyggerPart(party) ? getInnbyggerGruppert(party, metaMap) : [],
       }))
@@ -127,6 +127,8 @@ export default async function DashboardPage() {
             loggedInPid={pid ?? ""}
             altinnError={altinnError}
           />
+
+          <SendMeldingSkjema />
         </div>
       </main>
 

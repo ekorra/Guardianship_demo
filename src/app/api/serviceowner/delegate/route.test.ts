@@ -17,6 +17,7 @@ import { checkPdpAccess } from "@/lib/pdp"
 import { delegateServiceownerPackage } from "@/lib/serviceowner"
 
 const VALID_BODY = { fromPid: "01017012345", toPid: "02029912345", packageUrn: "urn:altinn:accesspackage:test" }
+const SKRANKEPUNKT_BODY = { ...VALID_BODY, skrankepunkt: true }
 
 function makeRequest(body: object) {
   return new Request("http://localhost/api/serviceowner/delegate", {
@@ -35,7 +36,7 @@ describe("POST /api/serviceowner/delegate", () => {
   it.skip("returnerer 403 når PDP gir Deny", async () => {
     vi.mocked(checkPdpAccess).mockResolvedValue("Deny")
 
-    const res = await POST(makeRequest(VALID_BODY))
+    const res = await POST(makeRequest(SKRANKEPUNKT_BODY))
     const data = await res.json()
 
     expect(res.status).toBe(403)
@@ -47,7 +48,7 @@ describe("POST /api/serviceowner/delegate", () => {
   it.skip("returnerer 403 når PDP gir NotApplicable", async () => {
     vi.mocked(checkPdpAccess).mockResolvedValue("NotApplicable")
 
-    const res = await POST(makeRequest(VALID_BODY))
+    const res = await POST(makeRequest(SKRANKEPUNKT_BODY))
 
     expect(res.status).toBe(403)
     expect(delegateServiceownerPackage).not.toHaveBeenCalled()
@@ -56,7 +57,7 @@ describe("POST /api/serviceowner/delegate", () => {
   it.skip("delegerer og returnerer ok ved Permit", async () => {
     vi.mocked(checkPdpAccess).mockResolvedValue("Permit")
 
-    const res = await POST(makeRequest(VALID_BODY))
+    const res = await POST(makeRequest(SKRANKEPUNKT_BODY))
     const data = await res.json()
 
     expect(res.status).toBe(200)

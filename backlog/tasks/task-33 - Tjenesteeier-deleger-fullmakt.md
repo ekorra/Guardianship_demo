@@ -26,7 +26,7 @@ Implementer delegering av fullmakt for tjenesteeier-flyt (flyt 2) via POST /serv
 <!-- AC:BEGIN -->
 - [x] #1 Seksjon 2.1: Innlogget bruker kan delegere på vegne av valgt aktør (fra aktørlisten i TASK-32) — fra-PID settes automatisk fra valgt aktør
 - [x] #2 Seksjon 2.1: For å delegere må innlogget bruker ha fullmakten urn:altinn:accesspackage:innbygger-tilgangsstyring-privatperson samt fullmakten/tilgangspakken hen skal delgerer på vegne av valgt aktør
-- [x] #3 Seksjon 2.1: Bruker fyller inn PID til mottaker (person eller virksomhet)
+- [ ] #3 Seksjon 2.1: Bruker fyller inn PID til mottaker (person eller virksomhet)
 - [x] #4 Tilgangspakker velges via komboboks med hardkodet liste — presentert med navn, ikke URN (initiell pakke: urn:altinn:accesspackage:innbygger-skatteforhold-privatpersoner)
 - [x] #5 Seksjon 2.2 (Skranke): Funksjonær fyller inn fra-PID og til-PID manuelt og velger tilgangspakke fra samme komboboks som 2.1
 - [x] #6 Delegering sendes til POST /serviceowner/connections/accesspackages med Maskinporten-token

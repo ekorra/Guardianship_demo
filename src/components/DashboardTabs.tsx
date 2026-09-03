@@ -1,12 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { ResourceVelger } from "@/components/ResourceVelger"
 import { AktørVelger } from "@/components/AktørVelger"
 import type { AktørData } from "@/components/AktørVelger"
 import { SkrankepunktFane } from "@/components/SkrankepunktFane"
 
-type Tab = "aktørliste" | "skrankepunkt"
+type Tab = "fullmakter" | "skrankepunkt"
 
 interface Props {
   harSkrankeAccess: boolean
@@ -15,21 +14,72 @@ interface Props {
   altinnError: string | null
 }
 
-export function DashboardTabs({ harSkrankeAccess, aktørData, loggedInPid, altinnError }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>("aktørliste")
+export function DashboardTabs({ harSkrankeAccess: initialHarSkrankeAccess, aktørData, loggedInPid, altinnError }: Props) {
+  const defaultAktør =
+    aktørData.find((a) => a.personId === loggedInPid) ?? aktørData[0]
+
+  const [activeTab, setActiveTab] = useState<Tab>("fullmakter")
+  const [selectedUuid, setSelectedUuid] = useState(defaultAktør?.partyUuid ?? "")
+  const [harSkrankeAccess, setHarSkrankeAccess] = useState(initialHarSkrankeAccess)
+
+  const selected = aktørData.find((a) => a.partyUuid === selectedUuid)
+
+  async function onAktørChange(uuid: string) {
+    setSelectedUuid(uuid)
+    const aktør = aktørData.find((a) => a.partyUuid === uuid)
+    if (!aktør) return
+
+    const params = new URLSearchParams()
+    if (aktør.organizationNumber) {
+      params.set("orgnr", aktør.organizationNumber)
+    } else if (aktør.personId) {
+      params.set("personId", aktør.personId)
+    }
+
+    try {
+      const res = await fetch(`/api/serviceowner/skrankepunkt-access?${params}`)
+      const data = (await res.json()) as { hasAccess: boolean; traces?: unknown[] }
+      if (data.traces?.length) {
+        window.dispatchEvent(new CustomEvent("dev-trace", { detail: data.traces }))
+      }
+      setHarSkrankeAccess(data.hasAccess)
+    } catch {
+      setHarSkrankeAccess(false)
+    }
+  }
 
   return (
     <div>
+      {aktørData.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+          <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-1.5">
+            Aktør
+          </label>
+          <select
+            value={selectedUuid}
+            onChange={(e) => onAktørChange(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:ring-1 focus:ring-blue-300"
+          >
+            {aktørData.map((a) => (
+              <option key={a.partyUuid} value={a.partyUuid}>
+                {a.name}{a.personId === loggedInPid ? " (deg)" : ""}{" "}
+                — {a.personId ?? a.organizationNumber ?? "—"}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="flex border-b border-gray-200 mb-6">
         <button
-          onClick={() => setActiveTab("aktørliste")}
+          onClick={() => setActiveTab("fullmakter")}
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-            activeTab === "aktørliste"
+            activeTab === "fullmakter"
               ? "text-blue-600 border-blue-600"
               : "text-gray-500 border-transparent hover:text-gray-700"
           }`}
         >
-          Aktørliste
+          Fullmakter
         </button>
         {harSkrankeAccess ? (
           <button
@@ -67,9 +117,9 @@ export function DashboardTabs({ harSkrankeAccess, aktørData, loggedInPid, altin
         )}
       </div>
 
-      {activeTab === "aktørliste" && (
+      {activeTab === "fullmakter" && (
         <>
-          <ResourceVelger />
+          {/* ResourceVelger skjult inntil videre (TASK-42) */}
           {altinnError ? (
             <div className="bg-white rounded-lg shadow-sm p-6">
               <p className="text-sm text-red-600">Kunne ikke hente data fra Altinn: {altinnError}</p>
@@ -79,7 +129,7 @@ export function DashboardTabs({ harSkrankeAccess, aktørData, loggedInPid, altin
               <p className="text-sm text-gray-400 italic">Ingen aktører funnet.</p>
             </div>
           ) : (
-            <AktørVelger aktører={aktørData} loggedInPid={loggedInPid} />
+            <AktørVelger selected={selected} />
           )}
         </>
       )}
