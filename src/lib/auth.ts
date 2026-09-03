@@ -262,8 +262,8 @@ export const config: NextAuthConfig = {
     },
   },
   pages: {
-    signIn: "/login",
-    error: "/login",
+    signIn: "/",
+    error: "/",
   },
 }
 
