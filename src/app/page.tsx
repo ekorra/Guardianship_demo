@@ -16,44 +16,52 @@ export default async function Home() {
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          {/* Alternativ 1 — aktivt */}
-          <div className="bg-white rounded-lg shadow-sm border-2 border-purple-500 p-6 flex flex-col">
-            <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mb-4">
-              <span className="text-lg font-bold text-purple-700">1</span>
-            </div>
-            <h2 className="text-sm font-semibold text-gray-800 mb-2">
-              Fullmaktspålogging via ID-porten
-            </h2>
-            <p className="text-xs text-gray-500 mb-6 flex-1">
-              Bruker logger inn og velger fullmaktsgiver. Fullmaktsinformasjon returneres direkte i tokenet.
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex gap-3">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-blue-700 flex-shrink-0 mt-0.5"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+          <div>
+            <h2 className="text-sm font-semibold text-blue-800 mb-1">Om denne demoen</h2>
+            <p className="text-xs text-blue-800">
+              Denne demoen viser praktiske eksempler på hvordan Altinn Autorisasjons fullmakts-APIer kan
+              integreres i egne systemer — fra ID-portens innebygde fullmaktsvelger, via tjenesteeiere som
+              slår opp fullmakter med Maskinporten, til sluttbrukersystemer der innbyggere selv forvalter
+              fullmakter. Bruk sidene og kildekoden under som referanse og utgangspunkt når du bygger
+              tilsvarende integrasjoner.
             </p>
-            <form
-              action={async () => {
-                "use server"
-                await signIn("idporten-fullmakt", { redirectTo: "/dashboard/fullmakt" })
-              }}
-            >
-              <button
-                type="submit"
-                data-testid="login-fullmakt"
-                className="w-full bg-purple-700 hover:bg-purple-800 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors"
-              >
-                Logg inn med ID-porten
-              </button>
-            </form>
           </div>
+        </div>
 
-          {/* Alternativ 2 — aktivt */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          {/* Kort 1 — Innlogging til tjenesteeier */}
           <div className="bg-white rounded-lg shadow-sm border-2 border-blue-500 p-6 flex flex-col">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-              <span className="text-lg font-bold text-blue-700">2</span>
-            </div>
             <h2 className="text-sm font-semibold text-gray-800 mb-2">
               Innlogging til tjenesteeier
             </h2>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              <span className="text-[10.5px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2.5 py-1">
+                Sluttbruker selv
+              </span>
+              <span className="text-[10.5px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2.5 py-1">
+                Ansatt hos TE
+              </span>
+            </div>
             <p className="text-xs text-gray-500 mb-6 flex-1">
-              Sluttbruker logger inn via ID-porten. Tjenesteeier henter fullmaktsdata via Maskinporten.
+              Tjenesteeier bruker Maskinporten i egne sider — enten for at sluttbruker selv delegerer og ber
+              om fullmakt, eller for at en saksbehandler handler på vegne av sluttbruker.
             </p>
             <form
               action={async () => {
@@ -71,16 +79,39 @@ export default async function Home() {
             </form>
           </div>
 
-          {/* Alternativ 3 — aktivt */}
+          {/* Kort 2 — Fullmaktsvelger i ID-porten */}
           <div className="bg-white rounded-lg shadow-sm border-2 border-blue-500 p-6 flex flex-col">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-              <span className="text-lg font-bold text-blue-700">3</span>
-            </div>
+            <h2 className="text-sm font-semibold text-gray-800 mb-2">
+              Fullmaktsvelger i ID-porten
+            </h2>
+            <p className="text-xs text-gray-500 mb-6 flex-1">
+              Vergen velger vergehaver direkte i ID-portens fullmaktsvelger. Fullmaktsinfo følger med i
+              token.
+            </p>
+            <form
+              action={async () => {
+                "use server"
+                await signIn("idporten-fullmakt", { redirectTo: "/dashboard/fullmakt" })
+              }}
+            >
+              <button
+                type="submit"
+                data-testid="login-fullmakt"
+                className="w-full bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors"
+              >
+                Logg inn med ID-porten
+              </button>
+            </form>
+          </div>
+
+          {/* Kort 3 — Sluttbrukersystem */}
+          <div className="bg-white rounded-lg shadow-sm border-2 border-teal-500 p-6 flex flex-col">
             <h2 className="text-sm font-semibold text-gray-800 mb-2">
               Sluttbrukersystem
             </h2>
             <p className="text-xs text-gray-500 mb-6 flex-1">
-              Bruker logger inn og ser fullmakter mottatt via Altinn-koblinger. Ingen tjenesteeier-API.
+              Sluttbruker forvalter fullmakter selv via Altinns sluttbruker-API — uten tjenesteeier-API i
+              mellom.
             </p>
             <form
               action={async () => {
@@ -91,7 +122,7 @@ export default async function Home() {
               <button
                 type="submit"
                 data-testid="login-sluttbrukersystem"
-                className="w-full bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors"
+                className="w-full bg-teal-700 hover:bg-teal-800 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors"
               >
                 Logg inn med ID-porten
               </button>
