@@ -26,7 +26,12 @@ test("Innlogging og utlogging via ID-porten TestID", async ({ page }) => {
   await page.getByLabel(/personidentifikator/i).first().fill(pid!)
   await page.getByRole("button", { name: /autentiser/i }).click()
 
-  // --- 6. Vent på redirect til /dashboard ---
+  // --- 6. Vent på rollevalg-siden og velg sluttbruker-rollen ---
+  await page.waitForURL("**/dashboard/velg-rolle", { timeout: 15_000 })
+  await expect(page).not.toHaveURL(/error/)
+  await page.getByTestId("velg-rolle-sluttbruker").click()
+
+  // --- 6b. Vent på redirect til /dashboard ---
   await page.waitForURL("**/dashboard", { timeout: 15_000 })
   await expect(page).toHaveURL(/\/dashboard$/)
   await expect(page).not.toHaveURL(/error/)

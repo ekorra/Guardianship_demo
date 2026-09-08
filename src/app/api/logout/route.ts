@@ -30,5 +30,8 @@ export async function GET(request: NextRequest) {
     response.cookies.set(name, "", isSecure ? { ...cookieBase, secure: true } : cookieBase)
   }
 
+  // Slett rollevalg for tjenesteeier-flyten, slik at neste innlogging spør på nytt
+  response.cookies.set("tjenesteeier-rolle", "", { maxAge: 0, path: "/" })
+
   return response
 }

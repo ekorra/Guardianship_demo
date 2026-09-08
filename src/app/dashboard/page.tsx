@@ -1,21 +1,19 @@
 import { auth } from "@/lib/auth"
-import { getMaskinportenToken, decodeOrgnr } from "@/lib/maskinporten"
+import { getTjenesteeierInfo } from "@/lib/serviceowner"
 import { getAuthorizedParties, isVergePart, isInnbyggerPart, getVergemålGruppert, getInnbyggerGruppert } from "@/lib/altinn"
 import { getAccessPackageMetadata } from "@/lib/accesspackages"
-import { checkPdpAccess } from "@/lib/pdp"
 import type { TraceEntry } from "@/lib/trace"
 import { DevPanel } from "@/components/DevPanel"
-import { DashboardTabs } from "@/components/DashboardTabs"
+import { TjenesteeierNav } from "@/components/TjenesteeierNav"
+import { UserInfoCard } from "@/components/UserInfoCard"
+import { AktørSelect } from "@/components/AktørSelect"
+import { SkrankepunktFane } from "@/components/SkrankepunktFane"
 import { SendMeldingSkjema } from "@/components/SendMeldingSkjema"
 import type { AktørData } from "@/components/AktørVelger"
 import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 
 const isDev = process.env.NODE_ENV === "development"
-
-interface TjenesteeierInfo {
-  navn: string
-  orgnr: string | null
-}
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -24,42 +22,24 @@ export default async function DashboardPage() {
     redirect("/login")
   }
 
-  const pid = session.user?.pid
-  let tjenesteeier: TjenesteeierInfo = { navn: "Tjenesteeier", orgnr: null }
-  let aktørData: AktørData[] = []
-  let altinnError: string | null = null
-  let harSkrankeAccess = false
-  const traces: TraceEntry[] = []
-
-  try {
-    const mpToken = await getMaskinportenToken(
-      "altinn:accessmanagement/authorizedparties.resourceowner"
-    )
-    const orgnr = decodeOrgnr(mpToken)
-    if (orgnr) {
-      const brregRes = await fetch(
-        `https://data.brreg.no/enhetsregisteret/api/enheter/${orgnr}`,
-        { next: { revalidate: 3600 } }
-      )
-      if (brregRes.ok) {
-        const brregData = (await brregRes.json()) as { navn?: string }
-        tjenesteeier = { navn: brregData.navn ?? "Ukjent virksomhet", orgnr }
-      } else {
-        tjenesteeier = { navn: "Ukjent virksomhet", orgnr }
-      }
-    }
-  } catch {
-    // Beholder default "Tjenesteeier" hvis noe feiler
+  const cookieStore = await cookies()
+  const rolle = cookieStore.get("tjenesteeier-rolle")?.value
+  if (rolle !== "ansatt" && rolle !== "sluttbruker") {
+    redirect("/dashboard/velg-rolle")
   }
 
-  if (pid) {
-    const [partiesResult, metaResult, pdpResult] = await Promise.allSettled([
+  const pid = session.user?.pid
+  let aktørData: AktørData[] = []
+  let altinnError: string | null = null
+  const traces: TraceEntry[] = []
+
+  const tjenesteeier = await getTjenesteeierInfo(isDev ? traces : undefined)
+
+  if (rolle === "sluttbruker" && pid) {
+    const [partiesResult, metaResult] = await Promise.allSettled([
       getAuthorizedParties(pid, isDev ? traces : undefined),
       getAccessPackageMetadata(),
-      checkPdpAccess(pid, pid, isDev ? traces : undefined, "ttd-skrankepunkt", "write"),
     ])
-
-    harSkrankeAccess = pdpResult.status === "fulfilled" && pdpResult.value === "Permit"
 
     if (partiesResult.status === "fulfilled" && metaResult.status === "fulfilled") {
       const parties = partiesResult.value
@@ -89,46 +69,37 @@ export default async function DashboardPage() {
   return (
     <>
       <main className="min-h-screen bg-gray-50">
-        <nav className="bg-white shadow-sm">
-          <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div>
-              <p className="text-lg font-semibold text-gray-800">{tjenesteeier.navn}</p>
-              {tjenesteeier.orgnr && (
-                <p className="text-xs text-gray-400 font-mono">orgnr: {tjenesteeier.orgnr}</p>
-              )}
-            </div>
-            <a href="/api/logout" className="text-sm text-gray-500 hover:text-gray-700">
-              Logg ut
-            </a>
-          </div>
-        </nav>
+        <TjenesteeierNav tjenesteeier={tjenesteeier} />
 
         <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6" data-testid="user-info">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Innlogget som</p>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                <span className="text-lg font-semibold text-blue-700">
-                  {session.user?.name?.charAt(0) ?? "?"}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-base font-semibold text-gray-900 truncate">
-                  {session.user?.name ?? <span className="italic text-gray-400 font-normal text-sm">ikke tilgjengelig</span>}
-                </p>
-                <p className="text-sm text-gray-400 font-mono mt-0.5">{pid ?? "—"}</p>
-              </div>
+          {rolle === "ansatt" ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center justify-between gap-3">
+              <p className="text-sm text-blue-800">
+                Du er logget inn som ansatt hos <span className="font-semibold">{tjenesteeier.navn}</span>
+              </p>
+              <a href="/dashboard/velg-rolle" className="text-sm text-blue-700 hover:text-blue-900 underline shrink-0">
+                Bytt rolle
+              </a>
             </div>
-          </div>
+          ) : (
+            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 mb-6 flex items-center justify-between gap-3">
+              <p className="text-sm text-teal-800">Du er logget inn som privatperson</p>
+              <a href="/dashboard/velg-rolle" className="text-sm text-teal-700 hover:text-teal-900 underline shrink-0">
+                Bytt rolle
+              </a>
+            </div>
+          )}
 
-          <DashboardTabs
-            harSkrankeAccess={harSkrankeAccess}
-            aktørData={aktørData}
-            loggedInPid={pid ?? ""}
-            altinnError={altinnError}
-          />
+          <UserInfoCard name={session.user?.name} pid={pid ?? null} />
 
-          <SendMeldingSkjema />
+          {rolle === "ansatt" ? (
+            <>
+              <SkrankepunktFane />
+              <SendMeldingSkjema />
+            </>
+          ) : (
+            <AktørSelect aktørData={aktørData} loggedInPid={pid ?? ""} altinnError={altinnError} />
+          )}
         </div>
       </main>
 

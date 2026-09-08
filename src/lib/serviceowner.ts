@@ -1,9 +1,39 @@
-import { getMaskinportenToken } from "./maskinporten"
+import { getMaskinportenToken, decodeOrgnr } from "./maskinporten"
 import type { TraceEntry } from "./trace"
 
 const SCOPE_READ = "altinn:accessmanagement/authorizedparties.serviceowner"
 const SCOPE_DELEGATE = "altinn:serviceowner/delegations:accesspackage.write"
 const BASE_URL = "https://platform.tt02.altinn.no/accessmanagement/api/v1"
+
+export interface TjenesteeierInfo {
+  navn: string
+  orgnr: string | null
+}
+
+export async function getTjenesteeierInfo(traces?: TraceEntry[]): Promise<TjenesteeierInfo> {
+  try {
+    const mpToken = await getMaskinportenToken(
+      "altinn:accessmanagement/authorizedparties.resourceowner",
+      traces,
+    )
+    const orgnr = decodeOrgnr(mpToken)
+    if (!orgnr) {
+      return { navn: "Tjenesteeier", orgnr: null }
+    }
+
+    const brregRes = await fetch(
+      `https://data.brreg.no/enhetsregisteret/api/enheter/${orgnr}`,
+      { next: { revalidate: 3600 } },
+    )
+    if (brregRes.ok) {
+      const brregData = (await brregRes.json()) as { navn?: string }
+      return { navn: brregData.navn ?? "Ukjent virksomhet", orgnr }
+    }
+    return { navn: "Ukjent virksomhet", orgnr }
+  } catch {
+    return { navn: "Tjenesteeier", orgnr: null }
+  }
+}
 
 export interface ServiceownerParty {
   partyUuid: string
