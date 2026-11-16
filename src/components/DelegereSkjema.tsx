@@ -71,7 +71,7 @@ export function DelegereSkjema() {
         onClick={() => setOpen(true)}
         className="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 rounded px-2 py-1"
       >
-        Deleger fullmakt
+        Gi fullmakt
       </button>
     )
   }
