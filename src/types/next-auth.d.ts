@@ -10,5 +10,6 @@ declare module "next-auth" {
     idToken?: string
     accessToken?: string
     authorizationDetails?: unknown
+    error?: string
   }
 }

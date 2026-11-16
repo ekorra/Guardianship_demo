@@ -245,13 +245,18 @@ export const config: NextAuthConfig = {
       const clientId = resolveClientId(provider)
       const kid = resolveKid(provider)
       const refreshed = await refreshIdPortenToken(refreshToken, clientId, kid)
-      if (!refreshed) return token
+      if (!refreshed) {
+        // Refresh-token er ugyldig/brukt opp — stopp videre forsøk og be sesjonen om re-innlogging
+        token.error = "RefreshTokenError"
+        return token
+      }
       token.accessToken = refreshed.access_token
       token.refreshToken = refreshed.refresh_token ?? refreshToken
       token.expiresAt = Math.floor(Date.now() / 1000) + refreshed.expires_in
       return token
     },
     session({ session, token }) {
+      if (token.error) session.error = token.error as string
       if (token.pid) session.user.pid = token.pid as string
       if (token.given_name) session.user.given_name = token.given_name as string
       if (token.family_name) session.user.family_name = token.family_name as string

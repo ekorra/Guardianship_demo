@@ -4,7 +4,7 @@ import { signIn } from "@/lib/auth"
 
 export default async function Home() {
   const session = await auth()
-  if (session) redirect("/dashboard")
+  if (session && !session.error) redirect("/dashboard")
 
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-12">

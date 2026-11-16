@@ -112,7 +112,7 @@ function MottatteForesporselListe({ requests, packageMetaMap }: { requests: Acce
 
 export default async function SluttbrukersystemPage() {
   const session = await auth()
-  if (!session) redirect("/")
+  if (!session || session.error) redirect("/")
 
   const pid = session.user?.pid
   const accessToken = session.accessToken

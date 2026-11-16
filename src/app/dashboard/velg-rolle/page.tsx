@@ -10,8 +10,8 @@ const isDev = process.env.NODE_ENV === "development"
 
 export default async function VelgRollePage() {
   const session = await auth()
-  if (!session) {
-    redirect("/login")
+  if (!session || session.error) {
+    redirect("/")
   }
 
   const traces: TraceEntry[] = []
