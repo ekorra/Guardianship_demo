@@ -10,11 +10,21 @@ vi.mock("@/lib/pdp", () => ({
 
 vi.mock("@/lib/serviceowner", () => ({
   delegateServiceownerPackage: vi.fn().mockResolvedValue(undefined),
+  delegateServiceownerResource: vi.fn().mockResolvedValue(undefined),
+  AltinnRequestError: class AltinnRequestError extends Error {
+    constructor(
+      message: string,
+      readonly status: number,
+      readonly problem?: unknown,
+    ) {
+      super(message)
+    }
+  },
 }))
 
 import { POST } from "./route"
 import { checkPdpAccess } from "@/lib/pdp"
-import { delegateServiceownerPackage } from "@/lib/serviceowner"
+import { AltinnRequestError, delegateServiceownerPackage, delegateServiceownerResource } from "@/lib/serviceowner"
 
 const VALID_BODY = { fromPid: "01017012345", toPid: "02029912345", packageUrn: "urn:altinn:accesspackage:test" }
 const SKRANKEPUNKT_BODY = { ...VALID_BODY, skrankepunkt: true }
@@ -90,5 +100,34 @@ describe("POST /api/serviceowner/delegate", () => {
 
     const res = await POST(makeRequest({ fromPid: "01017012345" }))
     expect(res.status).toBe(400)
+  })
+
+  it("delegerer enkelttjeneste med resourceId og rightKeys", async () => {
+    const res = await POST(
+      makeRequest({ fromPid: "01017012345", toPid: "02029912345", resourceId: "ttd-vergemalsdemo", rightKeys: ["read"] }),
+    )
+
+    expect(res.status).toBe(200)
+    expect(delegateServiceownerResource).toHaveBeenCalledWith(
+      "01017012345",
+      "02029912345",
+      "ttd-vergemalsdemo",
+      ["read"],
+      undefined,
+    )
+    expect(delegateServiceownerPackage).not.toHaveBeenCalled()
+  })
+
+  it("returnerer Altinns status og problem ved valideringsfeil", async () => {
+    const problem = { validationErrors: [{ code: "AMSO.VLD-00006" }] }
+    vi.mocked(delegateServiceownerResource).mockRejectedValueOnce(new AltinnRequestError("feil", 400, problem))
+
+    const res = await POST(
+      makeRequest({ fromPid: "01017012345", toPid: "02029912345", resourceId: "eno-forbruker-fullmakt", rightKeys: ["write"] }),
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(data.problem).toEqual(problem)
   })
 })

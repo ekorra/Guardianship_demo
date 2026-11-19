@@ -3,6 +3,7 @@ import type { TraceEntry } from "./trace"
 
 const SCOPE_READ = "altinn:accessmanagement/authorizedparties.serviceowner"
 const SCOPE_DELEGATE = "altinn:serviceowner/delegations:accesspackage.write"
+const SCOPE_DELEGATE_RESOURCE = "altinn:serviceowner/delegations:resource.write"
 const SCOPE_REQUEST_READ = "altinn:serviceowner/delegationrequests.read"
 const SCOPE_REQUEST_WRITE = "altinn:serviceowner/delegationrequests.write"
 const BASE_URL = "https://platform.tt02.altinn.no/accessmanagement/api/v1"
@@ -155,6 +156,125 @@ export async function delegateServiceownerPackage(
   const body = response.status === 204 ? null : await response.json()
   traces?.push({
     name: "Serviceowner: deleger tilgangspakke",
+    group: "tjenesteeier",
+    request: { method: "POST", url, body: requestBody },
+    response: { status: response.status, body },
+    durationMs,
+  })
+}
+
+interface ResourceRight {
+  key?: string
+  name?: string
+  action?: { type?: string; value?: string }
+}
+
+async function getServiceownerResourceRights(
+  resourceId: string,
+  token: string,
+  traces?: TraceEntry[],
+): Promise<ResourceRight[]> {
+  const url = `${BASE_URL}/serviceowner/connections/resources/rights?resource=${encodeURIComponent(resourceId)}`
+  const t0 = Date.now()
+
+  const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
+    },
+  })
+
+  const durationMs = Date.now() - t0
+
+  if (!response.ok) {
+    const body = await response.text()
+    traces?.push({
+      name: "Serviceowner: hent rettigheter for enkelttjeneste",
+      group: "tjenesteeier",
+      request: { method: "GET", url },
+      response: { status: response.status, body },
+      durationMs,
+    })
+    throw new AltinnRequestError(
+      `Henting av rettigheter feilet: ${response.status} ${body}`,
+      response.status,
+      parseProblem(body),
+    )
+  }
+
+  const body = (await response.json()) as ResourceRight[]
+  traces?.push({
+    name: "Serviceowner: hent rettigheter for enkelttjeneste",
+    group: "tjenesteeier",
+    request: { method: "GET", url },
+    response: { status: response.status, body },
+    durationMs,
+  })
+
+  return body
+}
+
+export async function delegateServiceownerResource(
+  fromPid: string,
+  toPid: string,
+  resourceId: string,
+  rightKeys: string[],
+  traces?: TraceEntry[],
+): Promise<void> {
+  const token = await getMaskinportenToken(SCOPE_DELEGATE_RESOURCE, traces)
+
+  // directRightKeys er Altinns rettighetsnøkler (hash), ikke handlingsnavn — slå dem opp per handling
+  const rights = await getServiceownerResourceRights(resourceId, token, traces)
+  const directRightKeys = rightKeys.map((action) => {
+    const right = rights.find((r) => r.action?.value === action)
+    if (!right?.key) {
+      throw new Error(`Fant ingen rettighetsnøkkel for handlingen «${action}» på ${resourceId}`)
+    }
+    return right.key
+  })
+
+  const url = `${BASE_URL}/serviceowner/connections/resources`
+  const requestBody = {
+    from: `urn:altinn:person:identifier-no:${fromPid}`,
+    to: `urn:altinn:person:identifier-no:${toPid}`,
+    resource: resourceId,
+    rightKeys: { directRightKeys },
+  }
+  const t0 = Date.now()
+
+  const subscriptionKey = process.env.ALTINN_SUBSCRIPTION_KEY
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...(subscriptionKey && { "Ocp-Apim-Subscription-Key": subscriptionKey }),
+    },
+    body: JSON.stringify(requestBody),
+  })
+
+  const durationMs = Date.now() - t0
+
+  if (!response.ok) {
+    const body = await response.text()
+    traces?.push({
+      name: "Serviceowner: deleger enkelttjeneste",
+      group: "tjenesteeier",
+      request: { method: "POST", url, body: requestBody },
+      response: { status: response.status, body },
+      durationMs,
+    })
+    throw new AltinnRequestError(
+      `Delegering av enkelttjeneste feilet: ${response.status} ${body}`,
+      response.status,
+      parseProblem(body),
+    )
+  }
+
+  const body = response.status === 204 ? null : await response.json()
+  traces?.push({
+    name: "Serviceowner: deleger enkelttjeneste",
     group: "tjenesteeier",
     request: { method: "POST", url, body: requestBody },
     response: { status: response.status, body },

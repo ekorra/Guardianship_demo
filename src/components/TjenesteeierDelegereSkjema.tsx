@@ -7,7 +7,7 @@ import type { EnkelttjenesteValg } from "@/components/EnkelttjenesteVelger"
 import type { AltinnProblem } from "@/lib/serviceowner"
 
 type Mode = "gi" | "be"
-type Step = "form" | "bekreft" | "suksess" | "feil" | "ikke-stottet"
+type Step = "form" | "bekreft" | "suksess" | "feil"
 type ValgType = "package" | "resource"
 
 interface Props {
@@ -59,6 +59,50 @@ const AVSLUTTET_STATUS = ["Approved", "Rejected", "Withdrawn"]
 const ALTINN_FEILKODER: Record<string, string> = {
   "AMSO.VLD-00006":
     "Tjenesten eies ikke av denne tjenesteeieren. En tjenesteeier kan bare be om tilgang til egne tjenester.",
+}
+
+function AltinnFeil({
+  tittel,
+  error,
+  problem,
+  onRetry,
+  onCancel,
+}: {
+  tittel: string
+  error: string | null
+  problem: AltinnProblem | null
+  onRetry: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div role="alert" className="border border-red-300 bg-red-50 rounded p-3 text-red-800">
+      <p className="font-medium flex items-center gap-1.5">
+        <span aria-hidden="true">✕</span>
+        {problem ? "Altinn avviste kallet" : tittel}
+      </p>
+      {problem?.validationErrors?.length ? (
+        <ul className="text-sm mt-1 list-disc pl-5">
+          {problem.validationErrors.map((v, i) => (
+            <li key={i}>{(v.code && ALTINN_FEILKODER[v.code]) ?? v.detail}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm mt-1">{problem?.detail ?? (problem ? null : error)}</p>
+      )}
+      {problem && (
+        <details className="mt-2 text-xs">
+          <summary className="cursor-pointer text-red-700">Tekniske detaljer</summary>
+          <pre className="mt-1 p-2 bg-white border border-red-200 rounded font-mono whitespace-pre-wrap break-all text-gray-700">
+            {JSON.stringify(problem, null, 2)}
+          </pre>
+        </details>
+      )}
+      <div className="flex gap-2 mt-2">
+        <button onClick={onRetry} className="text-xs text-gray-500 hover:text-gray-700">Prøv igjen</button>
+        <button onClick={onCancel} className="text-xs text-gray-500 hover:text-gray-700">Avbryt</button>
+      </div>
+    </div>
+  )
 }
 
 const TOM_ENKELTTJENESTE: EnkelttjenesteValg = { resourceId: "", title: "", actions: [] }
@@ -153,16 +197,27 @@ export function TjenesteeierDelegereSkjema({ selectedAktørPid, selectedAktørNa
   async function sendGi() {
     setLoading(true)
     setError(null)
+    setProblem(null)
     try {
+      const body =
+        giType === "package"
+          ? { fromPid: selectedAktørPid, toPid: giTilPid, packageUrn: giPackage }
+          : {
+              fromPid: selectedAktørPid,
+              toPid: giTilPid,
+              resourceId: giEnkelttjeneste.resourceId,
+              rightKeys: giEnkelttjeneste.actions,
+            }
       const res = await fetch("/api/serviceowner/delegate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fromPid: selectedAktørPid, toPid: giTilPid, packageUrn: giPackage }),
+        body: JSON.stringify(body),
       })
-      const data = (await res.json()) as { ok?: boolean; error?: string; traces?: unknown[] }
+      const data = (await res.json()) as { ok?: boolean; error?: string; problem?: AltinnProblem; traces?: unknown[] }
       dispatchTraces(data)
       if (!res.ok || !data.ok) {
         setError(data.error ?? "Noe gikk galt")
+        setProblem(data.problem ?? null)
         setStep("feil")
       } else {
         setStep("suksess")
@@ -372,7 +427,7 @@ export function TjenesteeierDelegereSkjema({ selectedAktørPid, selectedAktørNa
                 )}
 
                 {giType === "resource" && (
-                  <EnkelttjenesteVelger value={giEnkelttjeneste} onChange={setGiEnkelttjeneste} />
+                  <EnkelttjenesteVelger value={giEnkelttjeneste} onChange={setGiEnkelttjeneste} allowCustom />
                 )}
               </div>
               <div className="mt-3">
@@ -401,7 +456,7 @@ export function TjenesteeierDelegereSkjema({ selectedAktørPid, selectedAktørNa
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={giType === "package" ? sendGi : () => setStep("ikke-stottet")}
+                  onClick={sendGi}
                   disabled={loading}
                   className="text-xs bg-blue-600 text-white rounded px-3 py-1.5 disabled:opacity-60"
                 >
@@ -419,26 +474,14 @@ export function TjenesteeierDelegereSkjema({ selectedAktørPid, selectedAktørNa
             </div>
           )}
 
-          {step === "ikke-stottet" && (
-            <div className="text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
-              <p className="font-medium">Ikke tilgjengelig ennå</p>
-              <p className="text-xs mt-1 text-amber-700">
-                Altinn støtter ikke direkte delegering av enkelttjenester ennå — dette grensesnittet er klart og
-                kobles til når endepunktet finnes.
-              </p>
-              <button onClick={resetGi} className="text-xs text-gray-400 hover:text-gray-600 mt-2">Lukk</button>
-            </div>
-          )}
-
           {step === "feil" && (
-            <div className="text-red-700">
-              <p className="font-medium">Delegering feilet</p>
-              {error && <p className="text-xs mt-1 font-mono break-all">{error}</p>}
-              <div className="flex gap-2 mt-2">
-                <button onClick={() => setStep("bekreft")} className="text-xs text-gray-400 hover:text-gray-600">Prøv igjen</button>
-                <button onClick={resetGi} className="text-xs text-gray-400 hover:text-gray-600">Avbryt</button>
-              </div>
-            </div>
+            <AltinnFeil
+              tittel="Delegering feilet"
+              error={error}
+              problem={problem}
+              onRetry={() => setStep("bekreft")}
+              onCancel={resetGi}
+            />
           )}
         </>
       )}
@@ -551,33 +594,13 @@ export function TjenesteeierDelegereSkjema({ selectedAktørPid, selectedAktørNa
           )}
 
           {step === "feil" && (
-            <div role="alert" className="border border-red-300 bg-red-50 rounded p-3 text-red-800">
-              <p className="font-medium flex items-center gap-1.5">
-                <span aria-hidden="true">✕</span>
-                {problem ? "Altinn avviste forespørselen" : "Forespørsel feilet"}
-              </p>
-              {problem?.validationErrors?.length ? (
-                <ul className="text-sm mt-1 list-disc pl-5">
-                  {problem.validationErrors.map((v, i) => (
-                    <li key={i}>{(v.code && ALTINN_FEILKODER[v.code]) ?? v.detail}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm mt-1">{problem?.detail ?? (problem ? null : error)}</p>
-              )}
-              {problem && (
-                <details className="mt-2 text-xs">
-                  <summary className="cursor-pointer text-red-700">Tekniske detaljer</summary>
-                  <pre className="mt-1 p-2 bg-white border border-red-200 rounded font-mono whitespace-pre-wrap break-all text-gray-700">
-                    {JSON.stringify(problem, null, 2)}
-                  </pre>
-                </details>
-              )}
-              <div className="flex gap-2 mt-2">
-                <button onClick={() => setStep("bekreft")} className="text-xs text-gray-500 hover:text-gray-700">Prøv igjen</button>
-                <button onClick={resetBe} className="text-xs text-gray-500 hover:text-gray-700">Avbryt</button>
-              </div>
-            </div>
+            <AltinnFeil
+              tittel="Forespørsel feilet"
+              error={error}
+              problem={problem}
+              onRetry={() => setStep("bekreft")}
+              onCancel={resetBe}
+            />
           )}
 
           {requests.length > 0 && (

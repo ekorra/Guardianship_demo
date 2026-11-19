@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth"
-import { delegateServiceownerPackage } from "@/lib/serviceowner"
+import { AltinnRequestError, delegateServiceownerPackage, delegateServiceownerResource } from "@/lib/serviceowner"
 import { checkPdpAccess } from "@/lib/pdp"
 import { NextResponse } from "next/server"
 import type { TraceEntry } from "@/lib/trace"
@@ -14,16 +14,26 @@ export async function POST(request: Request) {
 
   const pid = session.user.pid
 
-  let body: { fromPid?: string; toPid?: string; packageUrn?: string; skrankepunkt?: boolean }
+  let body: {
+    fromPid?: string
+    toPid?: string
+    packageUrn?: string
+    resourceId?: string
+    rightKeys?: string[]
+    skrankepunkt?: boolean
+  }
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: "Ugyldig forespørsel" }, { status: 400 })
   }
 
-  const { fromPid, toPid, packageUrn, skrankepunkt } = body
-  if (!fromPid || !toPid || !packageUrn) {
-    return NextResponse.json({ error: "fromPid, toPid og packageUrn er påkrevd" }, { status: 400 })
+  const { fromPid, toPid, packageUrn, resourceId, rightKeys, skrankepunkt } = body
+  if (!fromPid || !toPid || (!packageUrn && !(resourceId && rightKeys?.length))) {
+    return NextResponse.json(
+      { error: "fromPid, toPid og enten packageUrn eller resourceId + rightKeys er påkrevd" },
+      { status: 400 },
+    )
   }
 
   const traces: TraceEntry[] = []
@@ -43,9 +53,19 @@ export async function POST(request: Request) {
         )
       }
     }
-    await delegateServiceownerPackage(fromPid, toPid, packageUrn, isDev ? traces : undefined)
+    if (packageUrn) {
+      await delegateServiceownerPackage(fromPid, toPid, packageUrn, isDev ? traces : undefined)
+    } else {
+      await delegateServiceownerResource(fromPid, toPid, resourceId!, rightKeys!, isDev ? traces : undefined)
+    }
     return NextResponse.json({ ok: true, traces: isDev ? traces : undefined })
   } catch (err) {
+    if (err instanceof AltinnRequestError) {
+      return NextResponse.json(
+        { error: err.message, problem: err.problem, traces: isDev ? traces : undefined },
+        { status: err.status },
+      )
+    }
     const message = err instanceof Error ? err.message : "Ukjent feil"
     return NextResponse.json({ error: message, traces: isDev ? traces : undefined }, { status: 500 })
   }

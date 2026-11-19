@@ -110,7 +110,8 @@ if (data.traces?.length) {
 - Assertion er RS256-signert med privatnøkkel fra `MASKINPORTEN_PRIVATE_KEY_JWK` (JWK-format)
 - Token caches in-memory per scope med 10 sekunders margin før utløp
 - Test-endepunkt: `https://test.maskinporten.no/token` / Audience: `https://test.maskinporten.no/`
-- **Scopes i bruk**: `altinn:accessmanagement/authorizedparties.resourceowner` (lese parter, flyt 2), `altinn:accessmanagement/authorizedparties.serviceowner` (serviceowner-parter), `altinn:serviceowner/delegations:accesspackage.write` (delegere tilgangspakker via serviceowner-API)
+- **Scopes i bruk**: `altinn:accessmanagement/authorizedparties.resourceowner` (lese parter, flyt 2), `altinn:accessmanagement/authorizedparties.serviceowner` (serviceowner-parter), `altinn:serviceowner/delegations:accesspackage.write` (delegere tilgangspakker via serviceowner-API), `altinn:serviceowner/delegations:resource.write` (delegere enkelttjenester direkte), `altinn:serviceowner/delegationrequests.read`/`.write` (forespørsler)
+- **POST /serviceowner/connections/resources** body: `{ from, to, resource: "{resourceId}", rightKeys: { directRightKeys: ["{rightKey}"] } }`. `rightKeys` er et objekt, ikke en liste (i motsetning til delegationrequests/resource). `directRightKeys` er Altinns rettighetsnøkler (hash), **ikke** handlingsnavn. De hentes med `GET /serviceowner/connections/resources/rights?resource={id}` (`key` per `action.value`); ellers svarer Altinn «Policy does not contain all rightkeys in delegation request»
 - **POST /serviceowner/connections/accesspackages** body: `{ from: "urn:altinn:person:identifier-no:{pid}", to: "urn:altinn:person:identifier-no:{pid}", packageUrn: "urn:altinn:accesspackage:..." }` — from/to MÅ være URN-format, ikke bare PID
 
 ### Altinn PDP (XACML JSON)

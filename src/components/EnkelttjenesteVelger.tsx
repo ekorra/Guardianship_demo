@@ -233,21 +233,22 @@ export function EnkelttjenesteVelger({ value, onChange, allowCustom = false }: P
           {showAddResource && (
             <div className="flex flex-wrap items-end gap-2 bg-gray-50 border border-gray-200 rounded p-3">
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-500">Ressurs-ID *</label>
+                <label className="text-xs text-gray-700">Ressurs-ID *</label>
                 <input
                   value={newResourceId}
                   onChange={(e) => setNewResourceId(e.target.value)}
                   placeholder="f.eks. nav-dagpenger"
-                  className="text-xs border border-gray-200 rounded px-2 py-1.5 w-40 focus:outline-none focus:ring-1 focus:ring-blue-300"
+                  spellCheck={false}
+                  className="text-xs text-gray-900 bg-white placeholder:text-gray-500 border border-gray-300 rounded px-2 py-1.5 w-40 focus:outline-none focus:ring-1 focus:ring-blue-300"
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-500">Navn</label>
+                <label className="text-xs text-gray-700">Navn</label>
                 <input
                   value={newResourceLabel}
                   onChange={(e) => setNewResourceLabel(e.target.value)}
                   placeholder="Visningsnavn (valgfritt, hentes automatisk hvis tomt)"
-                  className="text-xs border border-gray-200 rounded px-2 py-1.5 w-52 focus:outline-none focus:ring-1 focus:ring-blue-300"
+                  className="text-xs text-gray-900 bg-white placeholder:text-gray-500 border border-gray-300 rounded px-2 py-1.5 w-52 focus:outline-none focus:ring-1 focus:ring-blue-300"
                 />
               </div>
               <button
@@ -261,7 +262,7 @@ export function EnkelttjenesteVelger({ value, onChange, allowCustom = false }: P
               <button
                 type="button"
                 onClick={() => setShowAddResource(false)}
-                className="text-xs text-gray-400 hover:text-gray-600"
+                className="text-xs text-gray-600 hover:text-gray-800"
               >
                 Avbryt
               </button>
